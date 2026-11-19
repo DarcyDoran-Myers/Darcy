@@ -10,3 +10,14 @@ split into government-owned land, conservation easements, and nonprofit/private 
 Footprint: FNAI Florida Conservation Lands. Dates: FL DEP FL-SOLARIS deed dates, Florida Forever
 closing dates, USGS PAD-US 4.1 establishment dates; establishment years of large federal units
 fill gaps and are marked as estimated. Serve the folder over HTTP (`python3 -m http.server`) to view.
+
+## Water
+
+Pieces are clipped to land: FDEP Florida Counties with Shoreline (1:12,000), minus Lake Okeechobee and
+lakes/rivers ≥ ~1,000 acres from Esri USA Detailed Water Bodies (`tools/landclip.py`). Marshes and swamps stay.
+
+## Social video
+
+`video/florida-lands-conserved-vertical.mp4` (1080×1920, 9:16) and `video/florida-lands-conserved-square.mp4`
+(1080×1080), 32 s at 30 fps. Rendered from `video/render.html` frame by frame with Playwright + ffmpeg
+(`tools/video.js <vertical|square> out.mp4`).

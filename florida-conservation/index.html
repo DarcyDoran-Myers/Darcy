@@ -141,7 +141,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
         <div class="eyebrow">Share of Florida's land area</div>
         <div class="big" id="share">0%</div>
         <div class="bar" id="sharebar"><span style="background:var(--gov)"></span><span style="background:var(--esmt)"></span><span style="background:var(--ngo)"></span></div>
-        <div style="font-size:12px;color:var(--muted);margin-top:6px"><span id="acrestot">0</span> acres of 34.6 million. Includes submerged acres inside park boundaries. <span id="unkline"></span></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px"><span id="acrestot">0</span> acres of 34.6 million, land only. <span id="unkline"></span></div>
       </div>
 
       <div class="new">
@@ -167,7 +167,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
     <div>
       <h3>What's counted</h3>
       <p>The footprint is the Florida Natural Areas Inventory's <a href="https://www.fnai.org/species-communities/conservation-lands" target="_blank" rel="noopener">Florida Conservation Lands</a> layer, the state's standard list of managed conservation areas. Government-owned means fee title held by a federal, state, water management district or local agency. Easements are privately owned land where an agency or land trust holds the development rights.</p>
-      <p>Florida's land area of 34.6 million acres is the denominator. Park boundaries such as Everglades and Biscayne include open water, so the share runs higher than a land-only count would.</p>
+      <p>Open water is removed: the Gulf, the Atlantic, Florida Bay and other estuaries outside FDEP’s 1:12,000 shoreline, plus Lake Okeechobee and every lake or river wider than about 1,000 acres. That takes out about 2.1 million acres, mostly in Everglades, Biscayne and the Keys refuges. Marshes and swamps stay in. Florida's land area of 34.6 million acres is the denominator.</p>
     </div>
     <div>
       <h3>How each acre is dated</h3>
@@ -175,7 +175,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
     </div>
     <div>
       <h3>Sources</h3>
-      <p>FNAI Florida Conservation Lands (2025 web service) · Florida DEP Division of State Lands, FL‑SOLARIS state-owned lands · FNAI Florida Forever Acquisitions · USGS Gap Analysis Project, PAD‑US 4.1 Florida · US Census county boundaries via us-atlas. Retrieved November 2026. Parcel shapes are simplified to about 35 m.</p>
+      <p>FNAI Florida Conservation Lands (2025 web service) · Florida DEP Division of State Lands, FL‑SOLARIS state-owned lands · FNAI Florida Forever Acquisitions · USGS Gap Analysis Project, PAD‑US 4.1 Florida · FDEP Florida Counties with Shoreline (1:12,000) · Esri USA Detailed Water Bodies. Retrieved November 2026. Parcel shapes are simplified to about 35 m.</p>
     </div>
   </div>
 </div>
@@ -200,6 +200,7 @@ $('loading').remove();
 const lands = topojson.feature(topo, topo.objects.lands).features;
 const county = topojson.mesh(topo, topo.objects.counties, (a,b)=>a!==b);
 const state = topojson.feature(topo, topo.objects.state);
+const lakes = topojson.feature(topo, topo.objects.lakes);
 function ringsToPath(geom, p, bb){
   const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : [];
   for (const poly of polys) for (const ring of poly){
@@ -214,6 +215,7 @@ function lineToPath(geom, p){
 }
 const statePath = new Path2D(); state.features.forEach(f=>ringsToPath(f.geometry, statePath));
 const countyPath = new Path2D(); lineToPath(county, countyPath);
+const lakePath = new Path2D(); lakes.features.forEach(f=>ringsToPath(f.geometry, lakePath));
 const bounds = [Infinity,Infinity,-Infinity,-Infinity];
 state.features.forEach(f=>ringsToPath(f.geometry, new Path2D(), bounds));
 lands.forEach(f=>ringsToPath(f.geometry, new Path2D(), bounds));
@@ -285,6 +287,7 @@ function draw(){
   ctx.setTransform(dpr*k,0,0,-dpr*k,dpr*tx,dpr*ty);
   const px = 1/k; // one css pixel in data units
   ctx.fillStyle = colors.land; ctx.fill(statePath);
+  ctx.fillStyle = colors.water; ctx.fill(lakePath);
   ctx.lineWidth = px*0.8; ctx.strokeStyle = colors.county; ctx.stroke(countyPath);
   const yr = S.year;
   for (const gr of groupList){

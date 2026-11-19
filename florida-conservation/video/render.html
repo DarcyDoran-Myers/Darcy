@@ -1,0 +1,178 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Florida Lands Conserved – video renderer</title>
+<style>
+@font-face{font-family:"Barlow Semi Condensed";font-weight:600;src:url(fonts/barlow-600.woff2) format("woff2")}
+@font-face{font-family:"Barlow Semi Condensed";font-weight:700;src:url(fonts/barlow-700.woff2) format("woff2")}
+@font-face{font-family:"Public Sans";font-weight:400;src:url(fonts/public-400.woff2) format("woff2")}
+@font-face{font-family:"Public Sans";font-weight:600;src:url(fonts/public-600.woff2) format("woff2")}
+html,body{margin:0;background:#0d1211}
+canvas{display:block}
+</style></head>
+<body><canvas id="c"></canvas>
+<script src="d3.min.js"></script>
+<script src="topojson-client.min.js"></script>
+<script>
+/* Frame-by-frame renderer for the social video. Call window.setup(format) then window.renderFrame(i). */
+const C = {
+  bg:'#0d1211', land:'#1b2421', county:'#28332f', coast:'#33403b', water:'#0d1211',
+  gov:'#2e9a66', esmt:'#c58e22', ngo:'#5a86d0', hi:'#ff6a4d',
+  ink:'#eef2ee', ink2:'#b4bfb8', muted:'#7f8b84', rule:'#26302d'
+};
+const FD = '"Barlow Semi Condensed", "Arial Narrow", sans-serif', FB = '"Public Sans", system-ui, sans-serif';
+const FPS = 30, MINY = 1845, MAXY = 2026, LAND = 34.6e6;
+const ANN = [[1908,'Ocala National Forest'],[1947,'Everglades National Park'],[1972,'Environmentally Endangered Lands program'],
+             [1981,'Save Our Rivers'],[1990,'Preservation 2000'],[2001,'Florida Forever']];
+// timeline: seconds -> year
+const KEYS = [[0,MINY],[0.6,MINY],[2.4,1900],[10.4,1960],[27.4,MAXY]];
+const HOLD = 5.0, TOTAL = KEYS[KEYS.length-1][0] + HOLD;
+function yearAt(t){
+  for (let i=1;i<KEYS.length;i++){ const [t0,y0]=KEYS[i-1],[t1,y1]=KEYS[i];
+    if (t <= t1) return y0 + (y1-y0)*((t-t0)/(t1-t0)); }
+  return MAXY;
+}
+let cv, ctx, W, H, L, groups, statePath, countyPath, lakePath, bounds, cum, meta, featByYear;
+async function load(){
+  const [topo, m] = await Promise.all([fetch('../lands.json').then(r=>r.json()), fetch('../meta.json').then(r=>r.json())]);
+  meta = m;
+  const ring = (geom, p, bb) => {
+    const polys = geom.type==='Polygon' ? [geom.coordinates] : geom.type==='MultiPolygon' ? geom.coordinates : [];
+    for (const poly of polys) for (const r of poly){ r.forEach(([x,y],i)=>{ i?p.lineTo(x,y):p.moveTo(x,y);
+      if(bb){ if(x<bb[0])bb[0]=x; if(y<bb[1])bb[1]=y; if(x>bb[2])bb[2]=x; if(y>bb[3])bb[3]=y; } }); p.closePath(); }
+  };
+  statePath = new Path2D(); bounds=[Infinity,Infinity,-Infinity,-Infinity];
+  topojson.feature(topo, topo.objects.state).features.forEach(f=>ring(f.geometry, statePath, bounds));
+  lakePath = new Path2D(); topojson.feature(topo, topo.objects.lakes).features.forEach(f=>ring(f.geometry, lakePath));
+  countyPath = new Path2D();
+  const mesh = topojson.mesh(topo, topo.objects.counties, (a,b)=>a!==b);
+  (mesh.type==='LineString'?[mesh.coordinates]:mesh.coordinates).forEach(l=>l.forEach(([x,y],i)=>i?countyPath.lineTo(x,y):countyPath.moveTo(x,y)));
+  const g = new Map();
+  featByYear = new Map();
+  for (const f of topojson.feature(topo, topo.objects.lands).features){
+    const p = f.properties; if (p.y === 0) continue;
+    const grp = p.c===5 ? 'esmt' : p.c===4 ? 'ngo' : 'gov';
+    const k = p.y+'|'+grp;
+    if (!g.has(k)) g.set(k, {y:p.y, g:grp, path:new Path2D()});
+    ring(f.geometry, g.get(k).path);
+    if (!featByYear.has(p.y)) featByYear.set(p.y, new Map());
+    const fy = featByYear.get(p.y); fy.set(p.n, (fy.get(p.n)||0) + p.a);
+  }
+  groups = [...g.values()].sort((a,b)=>a.y-b.y);
+  cum = []; const acc={gov:0,esmt:0,ngo:0};
+  for (let y=MINY;y<=MAXY;y++){ const s=meta.stats[y]||{};
+    for (const k of ['gov','esmt','ngo']) acc[k] += (s[k]||0)+(s[k+'_m']||0);
+    cum.push({...acc}); }
+}
+function layout(fmt){
+  if (fmt === 'vertical'){ W=1080; H=1920;
+    return { map:[40,330,1000,1240], title:[64,120], stats:[64,1010], year:[64,980], chart:[64,1610,952,190], src:[64,1868], ann:[64,300], end:[64,640] };
+  }
+  W=1080; H=1080;
+  return { map:[300,80,760,880], title:[56,92], stats:[56,560], year:[56,530], chart:[56,940,968,92], src:[56,1056], ann:[56,180], end:[56,420] };
+}
+let LAY, FMT, hatch;
+window.setup = async function(fmt){
+  FMT = fmt; if (!groups) await load(); await document.fonts.ready;
+  await Promise.all(['600 20px "Barlow Semi Condensed"','700 20px "Barlow Semi Condensed"','400 20px "Public Sans"','600 20px "Public Sans"'].map(f=>document.fonts.load(f)));
+  LAY = layout(fmt); cv = document.getElementById('c'); cv.width=W; cv.height=H; ctx = cv.getContext('2d');
+  const hc = document.createElement('canvas'); hc.width=hc.height=9; const h=hc.getContext('2d');
+  h.strokeStyle=C.esmt; h.lineWidth=3; h.beginPath(); for(let i=-9;i<=18;i+=9){h.moveTo(i,9);h.lineTo(i+9,0);} h.stroke();
+  hatch = ctx.createPattern(hc,'repeat');
+  return Math.ceil(TOTAL*FPS);
+};
+const fmtAc = v => v>=1e6 ? (v/1e6).toFixed(2)+' million' : v>=1e3 ? Math.round(v/1e3).toLocaleString()+',000' : Math.round(v).toLocaleString();
+const ease = t => t<0?0:t>1?1:t*t*(3-2*t);
+function text(s, x, y, font, color, align='left', base='alphabetic'){ ctx.font=font; ctx.fillStyle=color; ctx.textAlign=align; ctx.textBaseline=base; ctx.fillText(s,x,y); }
+
+window.renderFrame = function(i){
+  const t = i/FPS, yf = yearAt(t), yr = Math.floor(yf), endT = t - KEYS[KEYS.length-1][0];
+  ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle=C.bg; ctx.fillRect(0,0,W,H);
+  // ---- map ----
+  const [mx,my,mw,mh] = LAY.map, bw=bounds[2]-bounds[0], bh=bounds[3]-bounds[1];
+  const k = Math.min(mw/bw, mh/bh), ox = mx + (mw-bw*k)/2 - bounds[0]*k, oy = my + (mh-bh*k)/2 + bounds[3]*k;
+  ctx.setTransform(k,0,0,-k,ox,oy); const px = 1/k;
+  ctx.fillStyle=C.land; ctx.fill(statePath); ctx.fillStyle=C.water; ctx.fill(lakePath);
+  ctx.lineWidth=px*1; ctx.strokeStyle=C.county; ctx.stroke(countyPath);
+  for (const g of groups){
+    if (g.y > yr) break;
+    const age = yf - g.y; // years since acquired (>=0)
+    if (g.g==='esmt'){ ctx.globalAlpha=.35; ctx.fillStyle=C.esmt; ctx.fill(g.path); ctx.globalAlpha=1;
+      hatch.setTransform(new DOMMatrix([px,0,0,-px,0,0])); ctx.fillStyle=hatch; ctx.fill(g.path);
+    } else { ctx.fillStyle=C[g.g]; ctx.fill(g.path); }
+    if (age < 2.2){ // flash new acquisitions
+      const a = 1 - age/2.2;
+      ctx.globalAlpha = a*.55; ctx.fillStyle=C.hi; ctx.fill(g.path);
+      ctx.globalAlpha = a; ctx.lineWidth=px*2.4; ctx.strokeStyle=C.hi; ctx.stroke(g.path); ctx.globalAlpha=1;
+    }
+  }
+  ctx.lineWidth=px*0.8; ctx.strokeStyle=C.coast; ctx.stroke(statePath);
+  ctx.setTransform(1,0,0,1,0,0);
+
+  const row = cum[yr-MINY], tot = row.gov+row.esmt+row.ngo, V = FMT==='vertical';
+  // ---- title ----
+  const [tx,ty] = LAY.title;
+  text('FLORIDA · 1845 TO TODAY', tx, ty-50, `600 ${V?30:22}px ${FD}`, C.muted);
+  text(V?'Every acre Florida':'Every acre Florida has conserved,', tx, ty+(V?10:0), `700 ${V?76:46}px ${FD}`, C.ink);
+  text(V?'has conserved, by the':'by the year it was acquired', tx, ty+(V?92:52), `700 ${V?76:46}px ${FD}`, C.ink);
+  if (V) text('year it was acquired', tx, ty+174, `700 76px ${FD}`, C.ink);
+
+  // ---- big year + counters (sit in the empty Gulf) ----
+  const [sx,sy] = LAY.stats;
+  text(String(yr), sx, sy, `700 ${V?200:150}px ${FD}`, C.ink);
+  const rows = [['gov','Government-owned', row.gov],['esmt','Conservation easements', row.esmt]];
+  rows.forEach(([g,l,v],j)=>{
+    const y0 = sy + (V?70:52) + j*(V?92:72);
+    if (g==='esmt'){ ctx.fillStyle=C.esmt; ctx.globalAlpha=.35; ctx.fillRect(sx,y0,V?34:26,V?34:26); ctx.globalAlpha=1;
+      hatch.setTransform(new DOMMatrix()); ctx.fillStyle=hatch; ctx.fillRect(sx,y0,V?34:26,V?34:26);
+      ctx.strokeStyle=C.esmt; ctx.lineWidth=2; ctx.strokeRect(sx+1,y0+1,(V?34:26)-2,(V?34:26)-2);
+    } else { ctx.fillStyle=C[g]; ctx.fillRect(sx,y0,V?34:26,V?34:26); }
+    text(l, sx+(V?50:38), y0+(V?14:11), `400 ${V?26:20}px ${FB}`, C.ink2, 'left','middle');
+    text(fmtAc(v)+' acres', sx+(V?50:38), y0+(V?50:39), `600 ${V?40:30}px ${FD}`, C.ink, 'left','middle');
+  });
+
+  // ---- program callouts ----
+  const [ax,ay] = LAY.ann;
+  for (const [y,l] of ANN){
+    const d = yf - y; if (d < 0 || d > (y<1960?14:5)) continue;
+    const span = y<1960?14:5, a = Math.min(1, d/0.6) * Math.min(1, (span-d)/1.2);
+    ctx.globalAlpha = Math.max(0,a);
+    ctx.fillStyle = C.hi; ctx.fillRect(ax, ay-(V?30:22), 6, V?40:30);
+    text(`${y} · ${l}`, ax+20, ay, `600 ${V?34:24}px ${FD}`, C.ink);
+    ctx.globalAlpha = 1;
+  }
+
+  // ---- cumulative strip chart ----
+  const [cx,cy,cw,ch] = LAY.chart, ymax = 11e6;
+  const X = y => cx + (y-MINY)/(MAXY-MINY)*cw, Y = v => cy+ch - v/ymax*ch;
+  ctx.strokeStyle=C.rule; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(cx,cy+ch+.5); ctx.lineTo(cx+cw,cy+ch+.5); ctx.stroke();
+  const layers = [['gov',r=>r.gov],['esmt',r=>r.gov+r.esmt],['ngo',r=>r.gov+r.esmt+r.ngo]];
+  for (let L=layers.length-1; L>=0; L--){
+    const [g,fn] = layers[L];
+    ctx.beginPath(); ctx.moveTo(X(MINY), Y(0));
+    for (let y=MINY; y<=yr; y++){ ctx.lineTo(X(y), Y(fn(cum[y-MINY]))); ctx.lineTo(X(y+1>yr?yf:y+1), Y(fn(cum[y-MINY]))); }
+    ctx.lineTo(X(yf), Y(0)); ctx.closePath(); ctx.fillStyle = C[g]; ctx.fill();
+  }
+  ctx.fillStyle=C.hi; ctx.fillRect(X(yf)-1.5, cy-4, 3, ch+4);
+  const tickY = cy+ch+(V?32:0);
+  if (V) [1850,1900,1950,2000].forEach(y=>text(String(y), X(y), tickY, `400 22px ${FB}`, C.muted, 'center'));
+  text(`${(tot/1e6).toFixed(1)}M acres`, cx, cy-(V?14:10), `600 ${V?28:20}px ${FD}`, C.ink2);
+
+  // ---- end card ----
+  if (endT > 0){
+    const a = ease(endT/0.8);
+    ctx.globalAlpha = a*.96; ctx.fillStyle=C.bg; ctx.fillRect(0,0,W,H); ctx.globalAlpha=a;
+    const [ex,ey] = LAY.end;
+    text('Today', ex, ey, `600 ${V?40:30}px ${FD}`, C.muted);
+    text(`${Math.round(tot/LAND*100)}%`, ex, ey+(V?230:170), `700 ${V?260:190}px ${FD}`, C.ink);
+    text('of Florida’s land is conserved', ex, ey+(V?310:230), `600 ${V?54:40}px ${FD}`, C.ink);
+    const lines = [['gov',`${fmtAc(row.gov)} acres government-owned`],['esmt',`${fmtAc(row.esmt)} acres in conservation easements`],['ngo',`${fmtAc(row.ngo)} acres in nonprofit preserves`]];
+    lines.forEach(([g,l],j)=>{ const y0 = ey+(V?390:290)+j*(V?66:50);
+      ctx.fillStyle=C[g]; ctx.fillRect(ex, y0-(V?24:18), V?28:20, V?28:20);
+      text(l, ex+(V?44:34), y0, `400 ${V?32:24}px ${FB}`, C.ink2); });
+    text('Land only, with dated acquisitions. About 1 million more acres have no recorded date.', ex, ey+(V?620:460), `400 ${V?24:18}px ${FB}`, C.muted);
+    ctx.globalAlpha = 1;
+  }
+  // ---- source ----
+  const [srx,sry] = LAY.src;
+  text('Data: FNAI Florida Conservation Lands · FL DEP state lands · Florida Forever · USGS PAD-US 4.1', srx, sry, `400 ${V?22:16}px ${FB}`, C.muted);
+};
+</script></body></html>

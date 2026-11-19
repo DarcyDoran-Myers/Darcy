@@ -29,3 +29,8 @@ if which=='ff':
     fetch('https://services.arcgis.com/9Jk4Zl9KofTtvg3x/arcgis/rest/services/Florida_Forever_Acquisitions/FeatureServer/2', W+'ff.geojson','PAR_NAME,PRJ_NAME,MA_NAME,MA_ID,ACQ_TYPE,CLOSE_DATE,MAN_AGNCY,ACRES', page=1000)
 if which=='sol':
     fetch('https://ca.dep.state.fl.us/arcgis/rest/services/OpenData/STATE_OWNED_LANDS/MapServer/0', W+'sol.geojson','OBJECTID,PROJECT_NAME,DOCUMENT_DATE,CLOSED_DATE,PARCEL_AC,CONSERVATION_STATUS_IND,LAND_ACTION_NAME,MANAGING_AGENCY_NAME,FUNDING_SOURCE_NAME', page=1000, offset=0.00002)
+if which=='shore':
+    fetch('https://services1.arcgis.com/nRHtyn3uE1kyzoYc/arcgis/rest/services/Florida_Counties_w_Shoreline_(12k)/FeatureServer/0', W+'shore.geojson','NAME,WATER', page=5)
+if which=='water':
+    fetch('https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_Detailed_Water_Bodies/FeatureServer/0', W+'water.geojson','NAME,FTYPE,SQKM',
+          where="FTYPE IN ('Lake/Pond','Reservoir','Stream/River') AND SQKM>=4 AND OBJECTID IN (SELECT OBJECTID FROM USA_Detailed_Water_Bodies)", page=50)

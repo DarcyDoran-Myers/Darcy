@@ -7,7 +7,7 @@ W, OUT = sys.argv[1], sys.argv[2]
 sys.path.insert(0, sys.argv[3])
 from curated import YEARS  # {FNAI managed-area name: establishment year}
 
-o = gpd.read_parquet(W + 'pieces.parquet')
+o = gpd.read_parquet(W + 'pieces_land.parquet')
 res = o.q == 'resid'
 cur = o.ma.map(YEARS)
 o.loc[res & cur.notna(), 'year'] = cur[res & cur.notna()]
@@ -54,11 +54,19 @@ d['n'] = d.ma.map(ni); d['c'] = d.cls.map(CLS.index); d['k'] = d.q.map(Q.index)
 d['y'] = d.year; d['m'] = d.mil.astype(int); d['a'] = d.acres.round().astype(int)
 d[['n', 'c', 'k', 'y', 'm', 'a', 'geometry']].to_file(W + 'web_lands.geojson', driver='GeoJSON')
 
-fl = gpd.read_file(W + 'fl_state.geojson').to_crs(3086)
-co = gpd.read_file(W + 'fl_counties.geojson').to_crs(3086)
-co['geometry'] = shapely.simplify(co.geometry.values, 200)
-co[['geometry']].assign(nm=co['name']).to_file(W + 'web_counties.geojson', driver='GeoJSON')
-fl[['geometry']].to_file(W + 'web_state.geojson', driver='GeoJSON')
+# basemap from the same 1:12,000 shoreline used to clip water
+sh = gpd.read_file(W + 'shore.geojson').to_crs(3086)
+co = sh[sh.WATER == 0].copy()
+co['geometry'] = shapely.simplify(shapely.make_valid(co.geometry.values), 120, preserve_topology=True)
+co = co.explode(index_parts=False); co = co[co.area > 4e5]
+co = co.dissolve(by='NAME', as_index=False)
+co[['NAME', 'geometry']].to_file(W + 'web_counties.geojson', driver='GeoJSON')
+st = gpd.GeoDataFrame(geometry=[shapely.union_all(co.geometry.values, grid_size=1)], crs=3086)
+st.to_file(W + 'web_state.geojson', driver='GeoJSON')
+lk = pd.concat([gpd.read_file(W + 'water.geojson').to_crs(3086)[['geometry']], sh[sh.WATER == 1][['geometry']]])
+lk['geometry'] = shapely.simplify(shapely.make_valid(lk.geometry.values), 80, preserve_topology=True)
+lk = lk.explode(index_parts=False); lk = lk[lk.area > 4e6]
+lk.to_file(W + 'web_lakes.geojson', driver='GeoJSON')
 
 json.dump({'names': names, 'cls': CLS, 'q': Q, 'stats': stats, 'levels': lv,
            'qacres': {k: round(float(v)) for k, v in o.groupby('q').acres.sum().items()}},
