@@ -1,0 +1,66 @@
+"""Step 3: resolve undated pieces, dissolve, simplify, write web data + yearly stats."""
+import sys, json
+import numpy as np, pandas as pd, geopandas as gpd
+import shapely
+
+W, OUT = sys.argv[1], sys.argv[2]
+sys.path.insert(0, sys.argv[3])
+from curated import YEARS  # {FNAI managed-area name: establishment year}
+
+o = gpd.read_parquet(W + 'pieces.parquet')
+res = o.q == 'resid'
+cur = o.ma.map(YEARS)
+o.loc[res & cur.notna(), 'year'] = cur[res & cur.notna()]
+o.loc[res & cur.notna(), 'q'] = 'unit'
+est = res & cur.isna() & (o.earliest > 0)
+o.loc[est, 'year'] = o.loc[est, 'earliest']
+o.loc[est, 'q'] = 'est'
+unk = res & cur.isna() & ~(o.earliest > 0)
+o.loc[unk, 'year'] = 0
+o.loc[unk, 'q'] = 'none'
+o['year'] = o.year.astype(int)
+o['acres'] = o.area / 4046.86
+
+# undated report for curation
+r = o[o.q.isin(['none', 'est'])].groupby(['ma', 'cls', 'q']).acres.sum().sort_values(ascending=False)
+r.head(80).to_csv(W + 'undated_report.csv')
+print(o.groupby('q').acres.sum().round())
+
+# yearly stats (unsimplified acreage)
+o['grp'] = np.where(o.cls == 'esmt', 'esmt', np.where(o.cls == 'ngo', 'ngo', 'gov'))
+st = o.groupby(['year', 'grp', 'mil']).acres.sum().unstack(['grp', 'mil'], fill_value=0)
+stats = {}
+for y, row in st.iterrows():
+    stats[int(y)] = {f'{g}{"_m" if m else ""}': round(float(v)) for (g, m), v in row.items() if v > 0}
+lvl = o[o.grp == 'gov'].groupby(['year', 'cls', 'mil']).acres.sum()
+lv = {}
+for (y, c, m), v in lvl.items():
+    lv.setdefault(int(y), {})[c + ('_m' if m else '')] = round(float(v))
+
+# dissolve per managed area / class / year, simplify for the web
+d = o.dissolve(by=['ma_id', 'ma', 'cls', 'year', 'q', 'mil'], as_index=False, aggfunc={'acres': 'sum'})
+d['geometry'] = shapely.simplify(d.geometry.values, 35, preserve_topology=True)
+d['geometry'] = shapely.make_valid(d.geometry.values)
+d = d[~d.geometry.is_empty & (d.acres >= 0.5)]
+d = d.explode(index_parts=False)
+d = d[d.geom_type == 'Polygon']
+d = d[d.area > 4047 * 0.4]  # drop slivers under ~0.4 ac after simplification
+d = d.dissolve(by=['ma_id', 'ma', 'cls', 'year', 'q', 'mil'], as_index=False, aggfunc={'acres': 'first'})
+names = sorted(d.ma.unique())
+ni = {n: i for i, n in enumerate(names)}
+CLS = ['fed', 'state', 'wmd', 'local', 'ngo', 'esmt']
+Q = ['parcel', 'unit', 'est', 'none']
+d['n'] = d.ma.map(ni); d['c'] = d.cls.map(CLS.index); d['k'] = d.q.map(Q.index)
+d['y'] = d.year; d['m'] = d.mil.astype(int); d['a'] = d.acres.round().astype(int)
+d[['n', 'c', 'k', 'y', 'm', 'a', 'geometry']].to_file(W + 'web_lands.geojson', driver='GeoJSON')
+
+fl = gpd.read_file(W + 'fl_state.geojson').to_crs(3086)
+co = gpd.read_file(W + 'fl_counties.geojson').to_crs(3086)
+co['geometry'] = shapely.simplify(co.geometry.values, 200)
+co[['geometry']].assign(nm=co['name']).to_file(W + 'web_counties.geojson', driver='GeoJSON')
+fl[['geometry']].to_file(W + 'web_state.geojson', driver='GeoJSON')
+
+json.dump({'names': names, 'cls': CLS, 'q': Q, 'stats': stats, 'levels': lv,
+           'qacres': {k: round(float(v)) for k, v in o.groupby('q').acres.sum().items()}},
+          open(OUT + 'meta.json', 'w'), separators=(',', ':'))
+print('features', len(d))

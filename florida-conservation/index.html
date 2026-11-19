@@ -1,0 +1,523 @@
+<title>Florida Lands Conserved</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: atlas sheet — map dominates, a ledger column of figures on the right, cumulative chart as a strip below. */
+:root{
+  --bg:#f3f5f1; --panel:#fbfcfa; --ink:#18221d; --ink2:#46534c; --muted:#6c7871; --rule:#d9dfd8;
+  --water:#e3ebeb; --land:#fdfdf9; --county:#d4dad2; --coast:#9aa7a0;
+  --gov:#2f7d4f; --esmt:#b97d0c; --ngo:#3a6fc0; --unk:#9aa29d;
+  --hi:#d6402a; --accent:#2f7d4f;
+  --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
+  --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
+  --gov:#2e9a66; --esmt:#b5801c; --ngo:#5a86d0; --unk:#6a736e; --hi:#ff6a4d; --accent:#3fb37a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
+  --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
+  --gov:#2e9a66; --esmt:#b5801c; --ngo:#5a86d0; --unk:#6a736e; --hi:#ff6a4d; --accent:#3fb37a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1320px;margin:0 auto;display:grid;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4vw,40px);line-height:1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--ink2);margin:6px 0 0;max-width:68ch}
+.eyebrow{font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:stretch}
+@media (max-width:900px){.main{grid-template-columns:1fr}}
+.mapbox{position:relative;background:var(--water);border:1px solid var(--rule);border-radius:6px;overflow:hidden;min-height:420px;aspect-ratio:1/1.02;max-height:82vh;width:100%}
+@media (max-width:900px){.mapbox{aspect-ratio:1/1.05;min-height:0}}
+@media (max-width:600px){.hint{display:none}.yearstamp{font-size:44px}}
+#map{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}
+#map.drag{cursor:grabbing}
+.yearstamp{position:absolute;left:16px;bottom:12px;font-family:var(--f-display);font-weight:700;font-size:clamp(48px,9vw,96px);line-height:.9;color:var(--ink);opacity:.9;pointer-events:none;font-variant-numeric:tabular-nums}
+.yearstamp small{display:block;font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.zoom{position:absolute;right:10px;top:10px;display:grid;gap:4px}
+.zoom button{width:32px;height:32px;border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:4px;font:600 16px/1 var(--f-body);cursor:pointer}
+.zoom button:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{position:absolute;max-width:260px;background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;box-shadow:0 4px 18px rgba(0,0,0,.18);font-size:13px;pointer-events:auto}
+.card h3{margin:0 0 4px;font:600 15px/1.2 var(--f-display)}
+.card .x{position:absolute;right:6px;top:4px;border:0;background:none;color:var(--muted);cursor:pointer;font-size:16px}
+.card dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:6px 0 0}
+.card dt{color:var(--muted)} .card dd{margin:0;font-variant-numeric:tabular-nums}
+.hint{position:absolute;left:10px;top:10px;max-width:60%;background:var(--panel);padding:2px 8px;border-radius:4px;opacity:.9;font-size:12px;color:var(--muted);pointer-events:none}
+
+aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.controls{display:flex;align-items:center;gap:10px}
+#play{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:#fff;cursor:pointer;display:grid;place-items:center}
+#play svg{width:18px;height:18px;fill:currentColor}
+#yr{flex:1;min-width:0;accent-color:var(--accent)}
+.speed{display:flex;gap:4px}
+.speed button{border:1px solid var(--rule);background:transparent;color:var(--ink2);border-radius:4px;padding:2px 7px;font:500 12px var(--f-body);cursor:pointer}
+.speed button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.tot{display:grid;gap:10px}
+.row{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center}
+.row label{display:contents;cursor:pointer}
+.row .nm{font-weight:500;line-height:1.25}
+.row .nm small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.row .v{font-family:var(--f-display);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums;text-align:right}
+.sw{width:18px;height:18px;border-radius:3px;display:block}
+.sw.gov{background:var(--gov)} .sw.ngo{background:var(--ngo)}
+.sw.esmt{background:repeating-linear-gradient(135deg,var(--esmt) 0 3px,transparent 3px 6px);border:2px solid var(--esmt)}
+.sw.unk{background:repeating-linear-gradient(45deg,var(--unk) 0 2px,transparent 2px 5px);border:1px solid var(--unk)}
+.row input{position:absolute;opacity:0;pointer-events:none}
+.row.off .sw{opacity:.25} .row.off .nm,.row.off .v{color:var(--muted)}
+.row:has(input:focus-visible) .sw{outline:2px solid var(--accent);outline-offset:2px}
+.share{border-top:1px solid var(--rule);padding-top:12px}
+.share .big{font-family:var(--f-display);font-weight:700;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.bar{height:8px;background:var(--rule);border-radius:4px;margin-top:8px;display:flex;overflow:hidden;gap:2px}
+.bar span{display:block;height:100%}
+.opts{display:grid;gap:6px;font-size:13px;color:var(--ink2);border-top:1px solid var(--rule);padding-top:12px}
+.opts label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.opts input{accent-color:var(--accent);margin-top:3px}
+.new h4{margin:0 0 6px} .new ol{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:13px}
+.new li{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:baseline}
+.new li i{width:8px;height:8px;border-radius:2px;display:block;transform:translateY(-1px)}
+.new li span:last-child{font-variant-numeric:tabular-nums;color:var(--ink2)}
+.new .none{color:var(--muted);font-size:13px}
+
+.chartbox{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:14px 16px 8px;position:relative;min-width:0}
+.chartbox .hd{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 16px;align-items:baseline}
+.chartbox h2,.new h4{font:600 16px/1.2 var(--f-display);margin:0}
+#chart{display:block;width:100%;height:220px;cursor:ew-resize;touch-action:pan-y}
+#chart text{fill:var(--muted);font:11px var(--f-body)}
+#chart .grid line{stroke:var(--rule)}
+#chart .ann line{stroke:var(--muted);stroke-dasharray:2 3}
+#chart .ann text{fill:var(--ink2);font-size:11px}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--rule);border-radius:5px;padding:6px 9px;font-size:12px;box-shadow:0 3px 12px rgba(0,0,0,.15);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tip b{font-family:var(--f-display);font-size:14px}
+.tip div{display:flex;gap:6px;align-items:center}
+.tip i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px 32px;color:var(--ink2);font-size:13px}
+.notes h3{font:600 14px var(--f-display);color:var(--ink);margin:0 0 4px;letter-spacing:.02em}
+.notes p{margin:0 0 8px;max-width:68ch}
+.notes a{color:var(--accent)}
+#loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Florida conservation lands · 1845 to today</div>
+      <h1>Florida Lands Conserved</h1>
+      <p class="sub">Every acre in Florida's statewide inventory of conservation lands, placed on the map in the year it was acquired. Press play to watch public ownership and conservation easements accumulate since statehood.</p>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="mapbox" id="mapbox">
+      <canvas id="map" aria-label="Map of Florida conservation lands acquired through the selected year"></canvas>
+      <div id="loading">Loading parcels…</div>
+      <div class="yearstamp" aria-hidden="true"><small>Acquired through</small><span id="stamp">1845</span></div>
+      <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zreset" aria-label="Reset view">⟲</button></div>
+      <div class="hint" id="hint">Drag to pan · scroll or pinch to zoom · click a parcel</div>
+    </div>
+
+    <aside>
+      <div>
+        <div class="controls">
+          <button id="play" aria-label="Play"><svg viewBox="0 0 20 20" id="playicon"><path d="M5 3l12 7-12 7z"/></svg></button>
+          <input type="range" id="yr" min="1845" max="2026" step="1" value="2026" aria-label="Year">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+          <span class="eyebrow">Speed</span>
+          <div class="speed" id="speed"><button data-s="0.5" aria-pressed="false">½×</button><button data-s="1" aria-pressed="true">1×</button><button data-s="2.5" aria-pressed="false">2.5×</button></div>
+        </div>
+      </div>
+
+      <div class="tot" id="tot">
+        <div class="row" data-g="gov"><label><input type="checkbox" id="t-gov" checked><span class="sw gov"></span><span class="nm">Government-owned<small>Federal, state, water district &amp; local</small></span></label><span class="v" id="v-gov">0</span></div>
+        <div class="row" data-g="esmt"><label><input type="checkbox" id="t-esmt" checked><span class="sw esmt"></span><span class="nm">Conservation easements<small>Private land, development rights retired</small></span></label><span class="v" id="v-esmt">0</span></div>
+        <div class="row" data-g="ngo"><label><input type="checkbox" id="t-ngo" checked><span class="sw ngo"></span><span class="nm">Nonprofit &amp; private preserves<small>Owned outright, not by government</small></span></label><span class="v" id="v-ngo">0</span></div>
+      </div>
+
+      <div class="share">
+        <div class="eyebrow">Share of Florida's land area</div>
+        <div class="big" id="share">0%</div>
+        <div class="bar" id="sharebar"><span style="background:var(--gov)"></span><span style="background:var(--esmt)"></span><span style="background:var(--ngo)"></span></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px"><span id="acrestot">0</span> acres of 34.6 million. Includes submerged acres inside park boundaries. <span id="unkline"></span></div>
+      </div>
+
+      <div class="new">
+        <h4 id="newh">Largest additions in 2026</h4>
+        <ol id="newlist"></ol>
+      </div>
+
+      <div class="opts">
+        <label><input type="checkbox" id="o-mil" checked> Include military bases with conservation management (Eglin, Avon Park, Camp Blanding…)</label>
+        <label><input type="checkbox" id="o-govlvl"> Shade government land by owner (federal, state, water district, local)</label>
+        <label><input type="checkbox" id="o-unk"> Show lands with no recorded acquisition date</label>
+      </div>
+    </aside>
+  </div>
+
+  <div class="chartbox">
+    <div class="hd"><h2>Cumulative acres conserved</h2><span class="eyebrow">Click or drag to set the year</span></div>
+    <svg id="chart" role="img" aria-label="Stacked area chart of cumulative conserved acres by year"></svg>
+    <div class="tip" id="tip" hidden></div>
+  </div>
+
+  <div class="notes">
+    <div>
+      <h3>What's counted</h3>
+      <p>The footprint is the Florida Natural Areas Inventory's <a href="https://www.fnai.org/species-communities/conservation-lands" target="_blank" rel="noopener">Florida Conservation Lands</a> layer, the state's standard list of managed conservation areas. Government-owned means fee title held by a federal, state, water management district or local agency. Easements are privately owned land where an agency or land trust holds the development rights.</p>
+      <p>Florida's land area of 34.6 million acres is the denominator. Park boundaries such as Everglades and Biscayne include open water, so the share runs higher than a land-only count would.</p>
+    </div>
+    <div>
+      <h3>How each acre is dated</h3>
+      <p id="qnote">Each piece of the footprint takes the earliest date from parcel records that cover it: deed dates in DEP's state-owned lands inventory (FL‑SOLARIS), closing dates of Florida Forever acquisitions, and establishment dates in USGS PAD‑US 4.1, which carries the National Conservation Easement Database. Where no parcel record exists, the managed area's establishment year is used and marked as estimated.</p>
+    </div>
+    <div>
+      <h3>Sources</h3>
+      <p>FNAI Florida Conservation Lands (2025 web service) · Florida DEP Division of State Lands, FL‑SOLARIS state-owned lands · FNAI Florida Forever Acquisitions · USGS Gap Analysis Project, PAD‑US 4.1 Florida · US Census county boundaries via us-atlas. Retrieved November 2026. Parcel shapes are simplified to about 35 m.</p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script>
+(async function(){
+const LAND_AREA = 34.6e6;
+const $ = id => document.getElementById(id);
+const fmt = d3.format(',');
+const fmtM = v => v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e4 ? Math.round(v/1e3)+'k' : fmt(Math.round(v));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const GROUP = c => c === 5 ? 'esmt' : c === 4 ? 'ngo' : 'gov';
+const LEVEL_NAMES = ['Federal','State','Water management district','Local government','Nonprofit / private','Conservation easement'];
+const Q_NAMES = ['Parcel deed or closing date','Managed-area establishment year (estimated)','Earliest dated parcel in the same area (estimated)','No recorded date'];
+
+const [topo, meta] = await Promise.all([fetch('lands.json').then(r=>r.json()), fetch('meta.json').then(r=>r.json())]);
+$('loading').remove();
+
+// ---------- geometry -> Path2D, grouped by year/class ----------
+const lands = topojson.feature(topo, topo.objects.lands).features;
+const county = topojson.mesh(topo, topo.objects.counties, (a,b)=>a!==b);
+const state = topojson.feature(topo, topo.objects.state);
+function ringsToPath(geom, p, bb){
+  const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.type === 'MultiPolygon' ? geom.coordinates : [];
+  for (const poly of polys) for (const ring of poly){
+    ring.forEach(([x,y],i)=>{ i ? p.lineTo(x,y) : p.moveTo(x,y);
+      if (bb){ if(x<bb[0])bb[0]=x; if(y<bb[1])bb[1]=y; if(x>bb[2])bb[2]=x; if(y>bb[3])bb[3]=y; } });
+    p.closePath();
+  }
+}
+function lineToPath(geom, p){
+  const ls = geom.type === 'LineString' ? [geom.coordinates] : geom.coordinates;
+  for (const l of ls) l.forEach(([x,y],i)=> i ? p.lineTo(x,y) : p.moveTo(x,y));
+}
+const statePath = new Path2D(); state.features.forEach(f=>ringsToPath(f.geometry, statePath));
+const countyPath = new Path2D(); lineToPath(county, countyPath);
+const bounds = [Infinity,Infinity,-Infinity,-Infinity];
+state.features.forEach(f=>ringsToPath(f.geometry, new Path2D(), bounds));
+lands.forEach(f=>ringsToPath(f.geometry, new Path2D(), bounds));
+
+const feats = lands.map(f=>{
+  const p = new Path2D(), bb=[Infinity,Infinity,-Infinity,-Infinity];
+  ringsToPath(f.geometry, p, bb);
+  const o = f.properties; return {...o, g: GROUP(o.c), path:p, bb};
+});
+// group paths: key = year|class|mil
+const groups = new Map();
+for (const f of feats){
+  const k = f.y+'|'+f.c+'|'+f.m;
+  if (!groups.has(k)) groups.set(k,{y:f.y,c:f.c,m:f.m,g:f.g,path:new Path2D(),feats:[]});
+  const gr = groups.get(k); gr.path.addPath(f.path); gr.feats.push(f);
+}
+const groupList = [...groups.values()].sort((a,b)=>a.y-b.y);
+
+// ---------- state ----------
+const S = { year: 2026, playing:false, speed:1, show:{gov:true,esmt:true,ngo:true}, mil:true, lvl:false, unk:false, sel:null };
+const minY = 1845, maxY = 2026;
+
+// ---------- canvas map ----------
+const canvas = $('map'), ctx = canvas.getContext('2d'), box = $('mapbox');
+let W=0,H=0,dpr=1, base={k:1,x:0,y:0}, zt = d3.zoomIdentity;
+function resize(){
+  const r = box.getBoundingClientRect(); dpr = Math.min(2, window.devicePixelRatio||1);
+  W = r.width; H = r.height; canvas.width = W*dpr; canvas.height = H*dpr;
+  const pad = 18, bw = bounds[2]-bounds[0], bh = bounds[3]-bounds[1];
+  const k = Math.min((W-2*pad)/bw, (H-2*pad)/bh);
+  base = {k, x: (W - bw*k)/2 - bounds[0]*k, y: (H - bh*k)/2 + bounds[3]*k};
+  draw();
+}
+let hatchCache = {};
+function hatch(color, k){
+  // diagonal hatch whose spacing stays constant on screen
+  const key = color;
+  if (!hatchCache[key]){
+    const c = document.createElement('canvas'); c.width = c.height = 8;
+    const g = c.getContext('2d'); g.strokeStyle = color; g.lineWidth = 2.6;
+    g.beginPath(); for (let i=-8;i<=16;i+=8){ g.moveTo(i,8); g.lineTo(i+8,0);} g.stroke();
+    hatchCache[key] = ctx.createPattern(c,'repeat');
+  }
+  const pat = hatchCache[key];
+  pat.setTransform(new DOMMatrix([1/(k), 0, 0, -1/(k), 0, 0]).scale(1/dpr? 1:1));
+  return pat;
+}
+let colors = {};
+function readColors(){
+  colors = {gov:css('--gov'),esmt:css('--esmt'),ngo:css('--ngo'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water')};
+  colors.lvl = [shade(colors.gov,-.28), colors.gov, shade(colors.gov,.32), shade(colors.gov,.55)];
+  hatchCache = {};
+}
+function shade(hex, t){ const c = d3.hsl(hex); c.l = c.l + (t>0 ? (1-c.l)*t : c.l*t); return c.formatHex(); }
+function visible(gr){
+  if (!S.show[gr.g]) return false;
+  if (gr.m && !S.mil) return false;
+  return true;
+}
+function fillFor(gr, k){
+  if (gr.g === 'esmt') return null; // handled separately
+  if (gr.g === 'gov' && S.lvl) return colors.lvl[gr.c];
+  return colors[gr.g];
+}
+function draw(){
+  const k = base.k*zt.k, tx = base.x*zt.k + zt.x, ty = base.y*zt.k + zt.y;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle = colors.water; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.setTransform(dpr*k,0,0,-dpr*k,dpr*tx,dpr*ty);
+  const px = 1/k; // one css pixel in data units
+  ctx.fillStyle = colors.land; ctx.fill(statePath);
+  ctx.lineWidth = px*0.8; ctx.strokeStyle = colors.county; ctx.stroke(countyPath);
+  const yr = S.year;
+  for (const gr of groupList){
+    if (gr.y > yr) break;
+    if (gr.y === 0 && !S.unk) continue;
+    if (!visible(gr)) continue;
+    if (gr.y === 0){ ctx.fillStyle = hatch(colors.unk, k); ctx.fill(gr.path); continue; }
+    if (gr.g === 'esmt'){
+      ctx.globalAlpha = .28; ctx.fillStyle = colors.esmt; ctx.fill(gr.path); ctx.globalAlpha = 1;
+      ctx.fillStyle = hatch(colors.esmt, k); ctx.fill(gr.path);
+      ctx.lineWidth = px*0.9; ctx.strokeStyle = colors.esmt; ctx.stroke(gr.path);
+    } else { ctx.fillStyle = fillFor(gr,k); ctx.fill(gr.path); }
+  }
+  // newly acquired this year: outline
+  for (const gr of groupList){
+    if (gr.y !== yr || yr === 0 || !visible(gr)) continue;
+    ctx.lineWidth = px*1.6; ctx.strokeStyle = colors.hi; ctx.stroke(gr.path);
+  }
+  ctx.lineWidth = px*1; ctx.strokeStyle = colors.coast; ctx.stroke(statePath);
+  if (S.sel){ ctx.lineWidth = px*2.5; ctx.strokeStyle = colors.ink; ctx.stroke(S.sel.path); }
+}
+
+// zoom & pan
+const zoom = d3.zoom().scaleExtent([1, 60]).on('zoom', e=>{ zt = e.transform; positionCard(); draw(); })
+  .on('start', ()=>canvas.classList.add('drag')).on('end', ()=>canvas.classList.remove('drag'));
+const sel = d3.select(canvas).call(zoom);
+$('zin').onclick = ()=>sel.transition().duration(250).call(zoom.scaleBy, 2);
+$('zout').onclick = ()=>sel.transition().duration(250).call(zoom.scaleBy, .5);
+$('zreset').onclick = ()=>sel.transition().duration(350).call(zoom.transform, d3.zoomIdentity);
+
+// click → info card
+let card = null, down = null;
+canvas.addEventListener('pointerdown', e=>down=[e.clientX,e.clientY]);
+canvas.addEventListener('click', e=>{
+  if (down && Math.hypot(e.clientX-down[0], e.clientY-down[1]) > 4) return;
+  const r = canvas.getBoundingClientRect(), sx = e.clientX-r.left, sy = e.clientY-r.top;
+  const k = base.k*zt.k, tx = base.x*zt.k + zt.x, ty = base.y*zt.k + zt.y;
+  const x = (sx - tx)/k, y = (ty - sy)/k;
+  ctx.setTransform(1,0,0,1,0,0);
+  let hit = null;
+  for (let i = groupList.length-1; i>=0 && !hit; i--){
+    const gr = groupList[i];
+    if (gr.y > S.year || (gr.y===0 && !S.unk) || !visible(gr)) continue;
+    for (const f of gr.feats){
+      if (x<f.bb[0]||x>f.bb[2]||y<f.bb[1]||y>f.bb[3]) continue;
+      if (ctx.isPointInPath(f.path, x, y)) { hit = f; break; }
+    }
+  }
+  S.sel = hit; showCard(hit, sx, sy); draw();
+});
+function showCard(f, sx, sy){
+  if (card){ card.remove(); card = null; }
+  if (!f) return;
+  card = document.createElement('div'); card.className = 'card';
+  const yr = f.y === 0 ? 'Not recorded' : f.y + (f.k === 1 || f.k === 2 ? ' (est.)' : '');
+  card.innerHTML = `<button class="x" aria-label="Close">×</button><h3></h3>
+    <dl><dt>Type</dt><dd>${LEVEL_NAMES[f.c]}${f.m?' · military':''}</dd>
+    <dt>Acquired</dt><dd>${yr}</dd><dt>This piece</dt><dd>${fmt(f.a)} ac</dd>
+    <dt>Dated by</dt><dd>${Q_NAMES[f.k]}</dd></dl>`;
+  card.querySelector('h3').textContent = meta.names[f.n];
+  card.querySelector('.x').onclick = ()=>{ S.sel=null; card.remove(); card=null; draw(); };
+  card.dataset.x = sx; card.dataset.y = sy; card._f = f;
+  box.appendChild(card); positionCard(true);
+}
+function positionCard(){
+  if (!card) return;
+  const sx = +card.dataset.x, sy = +card.dataset.y;
+  const w = card.offsetWidth, h = card.offsetHeight;
+  card.style.left = Math.max(8, Math.min(W - w - 8, sx + 12)) + 'px';
+  card.style.top = Math.max(8, Math.min(H - h - 8, sy + 12)) + 'px';
+}
+
+// ---------- stats ----------
+const years = d3.range(minY, maxY+1);
+const keyFor = (g, m) => g + (m ? '_m' : '');
+function cumulative(){
+  const acc = {gov:0,esmt:0,ngo:0}; const out = [];
+  for (const y of years){
+    const s = meta.stats[y] || {};
+    for (const g of ['gov','esmt','ngo']){
+      acc[g] += (s[g]||0) + (S.mil ? (s[g+'_m']||0) : 0);
+    }
+    out.push({year:y, gov:acc.gov, esmt:acc.esmt, ngo:acc.ngo});
+  }
+  return out;
+}
+let cum = cumulative();
+
+// additions by managed area per year (from features, simplified acreage)
+const addByYear = new Map();
+for (const f of feats){
+  if (f.y === 0) continue;
+  if (!addByYear.has(f.y)) addByYear.set(f.y, new Map());
+  const m = addByYear.get(f.y), key = f.n+'|'+f.g+'|'+f.m;
+  m.set(key, (m.get(key)||0) + f.a);
+}
+function updatePanel(){
+  const row = cum[S.year - minY];
+  const vis = g => S.show[g] ? row[g] : 0;
+  for (const g of ['gov','esmt','ngo']) $('v-'+g).textContent = fmtM(row[g]);
+  const tot = vis('gov')+vis('esmt')+vis('ngo');
+  $('share').textContent = (tot/LAND_AREA*100).toFixed(tot/LAND_AREA < .01 ? 2 : 1) + '%';
+  $('acrestot').textContent = fmt(Math.round(tot));
+  const spans = $('sharebar').children;
+  ['gov','esmt','ngo'].forEach((g,i)=> spans[i].style.width = (vis(g)/LAND_AREA*100)+'%');
+  $('stamp').textContent = S.year;
+  const u = meta.stats[0] || {}, ua = ['gov','esmt','ngo'].reduce((s,g)=>s + (S.show[g] ? (u[g]||0) + (S.mil ? (u[g+'_m']||0) : 0) : 0), 0);
+  $('unkline').textContent = ua ? `Another ${fmtM(ua)} acres have no recorded date and are not counted here.` : '';
+  $('newh').textContent = 'Largest additions in ' + S.year;
+  const m = addByYear.get(S.year), list = $('newlist'); list.innerHTML = '';
+  const items = m ? [...m.entries()].map(([k,a])=>{ const [n,g,mm]=k.split('|'); return {n:+n,g,m:mm==='1',a}; })
+      .filter(d=>S.show[d.g] && (S.mil || !d.m)).sort((a,b)=>b.a-a.a).slice(0,5) : [];
+  if (!items.length){ list.innerHTML = '<li class="none" style="display:block">No recorded acquisitions this year.</li>'; return; }
+  for (const d of items){
+    const li = document.createElement('li');
+    li.innerHTML = `<i style="background:var(--${d.g})"></i><span></span><span>${fmtM(d.a)} ac</span>`;
+    li.children[1].textContent = meta.names[d.n]; list.appendChild(li);
+  }
+}
+
+// ---------- chart ----------
+const svg = d3.select('#chart'), tip = $('tip');
+const ANN = [[1908,'Ocala NF'],[1947,'Everglades NP'],[1972,'EEL program'],[1979,'CARL'],[1981,'Save Our Rivers'],[1990,'Preservation 2000'],[2001,'Florida Forever']];
+let cx, cy, cw, chh, M = {l:44,r:10,t:44,b:22};
+function drawChart(){
+  const el = svg.node(), w = el.clientWidth, h = el.clientHeight;
+  svg.attr('viewBox',`0 0 ${w} ${h}`); svg.selectAll('*').remove();
+  cw = w - M.l - M.r; chh = h - M.t - M.b;
+  cx = d3.scaleLinear().domain([minY, maxY]).range([M.l, M.l+cw]);
+  const keys = ['gov','esmt','ngo'].filter(g=>S.show[g]);
+  const stack = d3.stack().keys(keys)(cum);
+  const ymax = d3.max(cum, d=>keys.reduce((s,k)=>s+d[k],0)) || 1;
+  cy = d3.scaleLinear().domain([0, ymax]).nice(4).range([M.t+chh, M.t]);
+  const g = svg.append('g').attr('class','grid');
+  cy.ticks(4).forEach(t=>{ g.append('line').attr('x1',M.l).attr('x2',M.l+cw).attr('y1',cy(t)).attr('y2',cy(t));
+    svg.append('text').attr('x',M.l-6).attr('y',cy(t)+4).attr('text-anchor','end').text(t===0?'0':(t/1e6)+'M'); });
+  const xt = w < 520 ? [1850,1900,1950,2000] : [1850,1875,1900,1925,1950,1975,2000,2025];
+  xt.forEach(t=>svg.append('text').attr('x',cx(t)).attr('y',h-6).attr('text-anchor','middle').text(t));
+  const area = d3.area().x(d=>cx(d.data.year)).y0(d=>cy(d[0])).y1(d=>cy(d[1])).curve(d3.curveStepAfter);
+  stack.forEach(s=>{
+    const p = svg.append('path').attr('d', area(s)).attr('fill', `var(--${s.key})`);
+    if (s.key==='esmt') p.attr('fill-opacity',.85);
+  });
+  // annotations
+  const a = svg.append('g').attr('class','ann');
+  const showAnn = w >= 640 ? ANN : ANN.filter(d=>[1947,1990,2001].includes(d[0]));
+  showAnn.forEach(([y,l],i)=>{
+    const x = cx(y), row = w >= 640 ? (y < 1970 ? 2 : (i-2)%3) : i%3, ty = M.t - 4 - row*13;
+    a.append('line').attr('x1',x).attr('x2',x).attr('y1',ty+3).attr('y2',M.t+chh);
+    a.append('text').attr('x',x+3).attr('y',ty).text(l);
+  });
+  // cursor
+  svg.append('rect').attr('id','shade').attr('y',M.t).attr('height',chh).attr('fill','var(--panel)').attr('opacity',.6);
+  svg.append('line').attr('id','cur').attr('y1',M.t-2).attr('y2',M.t+chh).attr('stroke','var(--hi)').attr('stroke-width',2);
+  svg.append('circle').attr('id','curdot').attr('r',4).attr('fill','var(--hi)').attr('stroke','var(--panel)').attr('stroke-width',2);
+  moveCursor();
+}
+function moveCursor(){
+  if (!cx) return;
+  const x = cx(S.year), keys = ['gov','esmt','ngo'].filter(g=>S.show[g]);
+  const row = cum[S.year-minY], top = keys.reduce((s,k)=>s+row[k],0);
+  svg.select('#cur').attr('x1',x).attr('x2',x);
+  svg.select('#curdot').attr('cx',x).attr('cy',cy(top));
+  svg.select('#shade').attr('x',x).attr('width',Math.max(0,M.l+cw-x));
+}
+function yearAt(clientX){
+  const r = svg.node().getBoundingClientRect();
+  return Math.max(minY, Math.min(maxY, Math.round(cx.invert(clientX - r.left))));
+}
+let scrubbing = false;
+svg.on('pointerdown', e=>{ scrubbing = true; svg.node().setPointerCapture(e.pointerId); stop(); setYear(yearAt(e.clientX)); })
+   .on('pointerup pointercancel', ()=>scrubbing=false)
+   .on('pointermove', e=>{
+     const y = yearAt(e.clientX); if (scrubbing) setYear(y);
+     const row = cum[y-minY], r = svg.node().getBoundingClientRect(), pr = svg.node().parentNode.getBoundingClientRect();
+     const lines = [['gov','Government-owned'],['esmt','Easements'],['ngo','Nonprofit']].filter(([g])=>S.show[g])
+       .map(([g,l])=>`<div><i style="background:var(--${g})"></i>${l}<span style="margin-left:auto;padding-left:12px">${fmt(Math.round(row[g]))} ac</span></div>`).join('');
+     tip.innerHTML = `<b>${y}</b>${lines}`; tip.hidden = false;
+     const x = e.clientX - pr.left; const tw = tip.offsetWidth;
+     tip.style.left = (x + 14 + tw > pr.width ? x - tw - 14 : x + 14) + 'px'; tip.style.top = (r.top - pr.top + 30) + 'px';
+   })
+   .on('pointerleave', ()=>{ tip.hidden = true; scrubbing=false; });
+
+// ---------- year control & playback ----------
+const slider = $('yr');
+function setYear(y){
+  S.year = y; slider.value = y; updatePanel(); moveCursor(); draw();
+  if (card && card._f && card._f.y > y){ S.sel=null; card.remove(); card=null; draw(); }
+}
+slider.addEventListener('input', ()=>{ stop(); setYear(+slider.value); });
+let timer = null, last = 0, accT = 0;
+function frame(t){
+  if (!S.playing) return;
+  const dt = last ? t - last : 0; last = t; accT += dt;
+  const per = (S.year < 1900 ? 45 : S.year < 1960 ? 110 : 260) / S.speed;
+  if (accT >= per){ accT = 0;
+    if (S.year >= maxY){ stop(); return; }
+    setYear(S.year+1);
+  }
+  timer = requestAnimationFrame(frame);
+}
+function play(){ if (S.year >= maxY) setYear(minY); S.playing = true; last = 0; accT = 0;
+  $('play').setAttribute('aria-label','Pause'); $('playicon').innerHTML = '<path d="M5 3h3.5v14H5zM11.5 3H15v14h-3.5z"/>';
+  timer = requestAnimationFrame(frame); }
+function stop(){ S.playing = false; cancelAnimationFrame(timer);
+  $('play').setAttribute('aria-label','Play'); $('playicon').innerHTML = '<path d="M5 3l12 7-12 7z"/>'; }
+$('play').onclick = ()=> S.playing ? stop() : play();
+$('speed').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  S.speed = +b.dataset.s; [...$('speed').children].forEach(x=>x.setAttribute('aria-pressed', x===b));
+});
+document.addEventListener('keydown', e=>{
+  if (e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') return;
+  if (e.code === 'Space' && e.target === document.body){ e.preventDefault(); S.playing ? stop() : play(); }
+});
+
+// toggles
+for (const g of ['gov','esmt','ngo']){
+  $('t-'+g).addEventListener('change', e=>{ S.show[g] = e.target.checked;
+    e.target.closest('.row').classList.toggle('off', !e.target.checked); updatePanel(); drawChart(); draw(); });
+}
+$('o-mil').addEventListener('change', e=>{ S.mil = e.target.checked; cum = cumulative(); updatePanel(); drawChart(); draw(); });
+$('o-govlvl').addEventListener('change', e=>{ S.lvl = e.target.checked; draw(); });
+$('o-unk').addEventListener('change', e=>{ S.unk = e.target.checked; draw(); });
+
+const qa = meta.qacres, qt = Object.values(qa).reduce((a,b)=>a+b,0);
+$('qnote').textContent += ` By area, ${Math.round((qa.parcel||0)/qt*100)}% is dated from parcel records, ${Math.round(((qa.unit||0)+(qa.est||0))/qt*100)}% is estimated, and ${((qa.none||0)/qt*100).toFixed(1)}% has no date and is hidden unless you turn it on.`;
+
+readColors();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{ readColors(); draw(); });
+new MutationObserver(()=>{ readColors(); draw(); }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+new ResizeObserver(()=>{ resize(); drawChart(); }).observe(box);
+window.addEventListener('resize', drawChart);
+resize(); updatePanel(); drawChart();
+})();
+</script>
