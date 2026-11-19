@@ -27,32 +27,37 @@ r.head(80).to_csv(W + 'undated_report.csv')
 print(o.groupby('q').acres.sum().round())
 
 # yearly stats (unsimplified acreage)
-o['grp'] = np.where(o.cls == 'esmt', 'esmt', np.where(o.cls == 'ngo', 'ngo', 'gov'))
+from ownership import owner_class
+fl_own = pd.read_parquet(W + 'flma.parquet', columns=['MA_ID', 'OWNER']).drop_duplicates('MA_ID')
+own_map = dict(zip(fl_own.MA_ID.astype(int), fl_own.OWNER.map(owner_class)))
+o['own'] = o.ma_id.map(own_map).fillna('private')
+OWN = ['public', 'private', 'nonprofit', 'tribal']
+o['grp'] = o.own
 st = o.groupby(['year', 'grp', 'mil']).acres.sum().unstack(['grp', 'mil'], fill_value=0)
 stats = {}
 for y, row in st.iterrows():
     stats[int(y)] = {f'{g}{"_m" if m else ""}': round(float(v)) for (g, m), v in row.items() if v > 0}
-lvl = o[o.grp == 'gov'].groupby(['year', 'cls', 'mil']).acres.sum()
+lvl = o[o.grp == 'public'].groupby(['year', 'cls', 'mil']).acres.sum()
 lv = {}
 for (y, c, m), v in lvl.items():
     lv.setdefault(int(y), {})[c + ('_m' if m else '')] = round(float(v))
 
 # dissolve per managed area / class / year, simplify for the web
-d = o.dissolve(by=['ma_id', 'ma', 'cls', 'year', 'q', 'mil'], as_index=False, aggfunc={'acres': 'sum'})
+d = o.dissolve(by=['ma_id', 'ma', 'cls', 'own', 'year', 'q', 'mil'], as_index=False, aggfunc={'acres': 'sum'})
 d['geometry'] = shapely.simplify(d.geometry.values, 35, preserve_topology=True)
 d['geometry'] = shapely.make_valid(d.geometry.values)
 d = d[~d.geometry.is_empty & (d.acres >= 0.5)]
 d = d.explode(index_parts=False)
 d = d[d.geom_type == 'Polygon']
 d = d[d.area > 4047 * 0.4]  # drop slivers under ~0.4 ac after simplification
-d = d.dissolve(by=['ma_id', 'ma', 'cls', 'year', 'q', 'mil'], as_index=False, aggfunc={'acres': 'first'})
+d = d.dissolve(by=['ma_id', 'ma', 'cls', 'own', 'year', 'q', 'mil'], as_index=False, aggfunc={'acres': 'first'})
 names = sorted(d.ma.unique())
 ni = {n: i for i, n in enumerate(names)}
 CLS = ['fed', 'state', 'wmd', 'local', 'ngo', 'esmt']
 Q = ['parcel', 'unit', 'est', 'none']
-d['n'] = d.ma.map(ni); d['c'] = d.cls.map(CLS.index); d['k'] = d.q.map(Q.index)
+d['o'] = d.own.map(OWN.index); d['e'] = (d.cls == 'esmt').astype(int); d['n'] = d.ma.map(ni); d['c'] = d.cls.map(CLS.index); d['k'] = d.q.map(Q.index)
 d['y'] = d.year; d['m'] = d.mil.astype(int); d['a'] = d.acres.round().astype(int)
-d[['n', 'c', 'k', 'y', 'm', 'a', 'geometry']].to_file(W + 'web_lands.geojson', driver='GeoJSON')
+d[['n', 'c', 'o', 'e', 'k', 'y', 'm', 'a', 'geometry']].to_file(W + 'web_lands.geojson', driver='GeoJSON')
 
 # basemap from the same 1:12,000 shoreline used to clip water
 sh = gpd.read_file(W + 'shore.geojson').to_crs(3086)
@@ -68,7 +73,8 @@ lk['geometry'] = shapely.simplify(shapely.make_valid(lk.geometry.values), 80, pr
 lk = lk.explode(index_parts=False); lk = lk[lk.area > 4e6]
 lk.to_file(W + 'web_lakes.geojson', driver='GeoJSON')
 
-json.dump({'names': names, 'cls': CLS, 'q': Q, 'stats': stats, 'levels': lv,
+esm = o[(o.cls == 'esmt') & ~o.mil].groupby('year').acres.sum()
+json.dump({'names': names, 'cls': CLS, 'own': OWN, 'easement': {int(y): round(float(v)) for y, v in esm.items()}, 'q': Q, 'stats': stats, 'levels': lv,
            'qacres': {k: round(float(v)) for k, v in o.groupby('q').acres.sum().items()}},
           open(OUT + 'meta.json', 'w'), separators=(',', ':'))
 print('features', len(d))

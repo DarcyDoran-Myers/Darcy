@@ -39,6 +39,7 @@ YEARS = {
     'Everglades Headwaters National Wildlife Refuge and Conservation Area': 2012,
     'Tortugas Ecological Reserve': 2001,
     'Corkscrew Swamp Sanctuary': 1954,
+    'Miccosukee Indian Water Conservation Area': 1982,  # Florida Indian Land Claims Settlement Act of 1982
     # sovereign submerged lands: state title since statehood (equal-footing doctrine)
     'Lake Okeechobee Marsh': 1845,
     'Lake Okeechobee Sanctuaries': 1845,

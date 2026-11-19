@@ -7,19 +7,19 @@
 :root{
   --bg:#f3f5f1; --panel:#fbfcfa; --ink:#18221d; --ink2:#46534c; --muted:#6c7871; --rule:#d9dfd8;
   --water:#e3ebeb; --land:#fdfdf9; --county:#d4dad2; --coast:#9aa7a0;
-  --gov:#2f7d4f; --esmt:#b97d0c; --ngo:#3a6fc0; --unk:#9aa29d;
-  --hi:#d6402a; --accent:#2f7d4f;
+  --public:#2f7d4f; --private:#b97d0c; --nonprofit:#3a6fc0; --tribal:#b04a72; --unk:#9aa29d;
+  --hi:#18221d; --accent:#2f7d4f;
   --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
   --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
-  --gov:#2e9a66; --esmt:#b5801c; --ngo:#5a86d0; --unk:#6a736e; --hi:#ff6a4d; --accent:#3fb37a; color-scheme:dark}}
+  --public:#2e9a66; --private:#b5801c; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
   --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
-  --gov:#2e9a66; --esmt:#b5801c; --ngo:#5a86d0; --unk:#6a736e; --hi:#ff6a4d; --accent:#3fb37a; color-scheme:dark}
+  --public:#2e9a66; --private:#b5801c; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
@@ -62,8 +62,10 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
 .row .nm small{display:block;color:var(--muted);font-weight:400;font-size:12px}
 .row .v{font-family:var(--f-display);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums;text-align:right}
 .sw{width:18px;height:18px;border-radius:3px;display:block}
-.sw.gov{background:var(--gov)} .sw.ngo{background:var(--ngo)}
-.sw.esmt{background:repeating-linear-gradient(135deg,var(--esmt) 0 3px,transparent 3px 6px);border:2px solid var(--esmt)}
+.sw.public{background:var(--public)} .sw.private{background:var(--private)} .sw.nonprofit{background:var(--nonprofit)} .sw.tribal{background:var(--tribal)}
+.sw.hatch{background:repeating-linear-gradient(135deg,var(--ink2) 0 2px,transparent 2px 5px);border:1.5px solid var(--ink2)}
+.ekey{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;border-top:1px dashed var(--rule);padding-top:10px;font-size:13px;color:var(--ink2)}
+.ekey b{font-family:var(--f-display);font-weight:600;font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
 .sw.unk{background:repeating-linear-gradient(45deg,var(--unk) 0 2px,transparent 2px 5px);border:1px solid var(--unk)}
 .row input{position:absolute;opacity:0;pointer-events:none}
 .row.off .sw{opacity:.25} .row.off .nm,.row.off .v{color:var(--muted)}
@@ -104,9 +106,9 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
 <div class="wrap">
   <header>
     <div>
-      <div class="eyebrow">Florida conservation lands · 1845 to today</div>
+      <div class="eyebrow">Florida conservation lands · 1900 to today</div>
       <h1>Florida Lands Conserved</h1>
-      <p class="sub">Every acre in Florida's statewide inventory of conservation lands, placed on the map in the year it was acquired. Press play to watch public ownership and conservation easements accumulate since statehood.</p>
+      <p class="sub">Every acre in Florida's statewide inventory of conservation lands, placed on the map in the year it was acquired. Press play to watch it accumulate since 1900, by who owns the land.</p>
     </div>
   </header>
 
@@ -114,7 +116,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
     <div class="mapbox" id="mapbox">
       <canvas id="map" aria-label="Map of Florida conservation lands acquired through the selected year"></canvas>
       <div id="loading">Loading parcels…</div>
-      <div class="yearstamp" aria-hidden="true"><small>Acquired through</small><span id="stamp">1845</span></div>
+      <div class="yearstamp" aria-hidden="true"><small>Acquired through</small><span id="stamp">1900</span></div>
       <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zreset" aria-label="Reset view">⟲</button></div>
       <div class="hint" id="hint">Drag to pan · scroll or pinch to zoom · click a parcel</div>
     </div>
@@ -123,7 +125,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
       <div>
         <div class="controls">
           <button id="play" aria-label="Play"><svg viewBox="0 0 20 20" id="playicon"><path d="M5 3l12 7-12 7z"/></svg></button>
-          <input type="range" id="yr" min="1845" max="2026" step="1" value="2026" aria-label="Year">
+          <input type="range" id="yr" min="1900" max="2026" step="1" value="2026" aria-label="Year">
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
           <span class="eyebrow">Speed</span>
@@ -132,15 +134,17 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
       </div>
 
       <div class="tot" id="tot">
-        <div class="row" data-g="gov"><label><input type="checkbox" id="t-gov" checked><span class="sw gov"></span><span class="nm">Government-owned<small>Federal, state, water district &amp; local</small></span></label><span class="v" id="v-gov">0</span></div>
-        <div class="row" data-g="esmt"><label><input type="checkbox" id="t-esmt" checked><span class="sw esmt"></span><span class="nm">Conservation easements<small>Private land, development rights retired</small></span></label><span class="v" id="v-esmt">0</span></div>
-        <div class="row" data-g="ngo"><label><input type="checkbox" id="t-ngo" checked><span class="sw ngo"></span><span class="nm">Nonprofit &amp; private preserves<small>Owned outright, not by government</small></span></label><span class="v" id="v-ngo">0</span></div>
+        <div class="row"><label><input type="checkbox" id="t-public" checked><span class="sw public"></span><span class="nm">Public<small>Federal, state, water district &amp; local government</small></span></label><span class="v" id="v-public">0</span></div>
+        <div class="row"><label><input type="checkbox" id="t-private" checked><span class="sw private"></span><span class="nm">Private<small>Individuals &amp; companies, mostly under easement</small></span></label><span class="v" id="v-private">0</span></div>
+        <div class="row"><label><input type="checkbox" id="t-nonprofit" checked><span class="sw nonprofit"></span><span class="nm">Nonprofit<small>Land trusts, Audubon, The Nature Conservancy</small></span></label><span class="v" id="v-nonprofit">0</span></div>
+        <div class="row"><label><input type="checkbox" id="t-tribal" checked><span class="sw tribal"></span><span class="nm">Tribal<small>Miccosukee Tribe</small></span></label><span class="v" id="v-tribal">0</span></div>
+        <div class="ekey"><span class="sw hatch"></span><span>Hatched: protected by a conservation easement</span><b id="v-esmt">0</b></div>
       </div>
 
       <div class="share">
         <div class="eyebrow">Share of Florida's land area</div>
         <div class="big" id="share">0%</div>
-        <div class="bar" id="sharebar"><span style="background:var(--gov)"></span><span style="background:var(--esmt)"></span><span style="background:var(--ngo)"></span></div>
+        <div class="bar" id="sharebar"><span style="background:var(--public)"></span><span style="background:var(--private)"></span><span style="background:var(--nonprofit)"></span><span style="background:var(--tribal)"></span></div>
         <div style="font-size:12px;color:var(--muted);margin-top:6px"><span id="acrestot">0</span> acres of 34.6 million, land only. <span id="unkline"></span></div>
       </div>
 
@@ -151,7 +155,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
 
       <div class="opts">
         <label><input type="checkbox" id="o-mil" checked> Include military bases with conservation management (Eglin, Avon Park, Camp Blanding…)</label>
-        <label><input type="checkbox" id="o-govlvl"> Shade government land by owner (federal, state, water district, local)</label>
+        <label><input type="checkbox" id="o-govlvl"> Shade public land by agency level (federal, state, water district, local)</label>
         <label><input type="checkbox" id="o-unk"> Show lands with no recorded acquisition date</label>
       </div>
     </aside>
@@ -166,7 +170,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
   <div class="notes">
     <div>
       <h3>What's counted</h3>
-      <p>The footprint is the Florida Natural Areas Inventory's <a href="https://www.fnai.org/species-communities/conservation-lands" target="_blank" rel="noopener">Florida Conservation Lands</a> layer, the state's standard list of managed conservation areas. Government-owned means fee title held by a federal, state, water management district or local agency. Easements are privately owned land where an agency or land trust holds the development rights.</p>
+      <p>The footprint is the Florida Natural Areas Inventory's <a href="https://www.fnai.org/species-communities/conservation-lands" target="_blank" rel="noopener">Florida Conservation Lands</a> layer, the state's standard list of managed conservation areas. Each area is grouped by who holds title: public agencies, private individuals and companies, nonprofits, or a tribe. Private conservation land is almost entirely under conservation easements, where an agency or land trust holds the development rights; hatching marks easement land in any ownership group. Only one tribal area, the Miccosukee Tribe's 46,000-acre conservation area in the Everglades, is in the inventory; the Seminole Tribe's reservations are not.</p>
       <p>Open water is removed: the Gulf, the Atlantic, Florida Bay and other estuaries outside FDEP’s 1:12,000 shoreline, plus Lake Okeechobee and every lake or river wider than about 1,000 acres. That takes out about 2.1 million acres, mostly in Everglades, Biscayne and the Keys refuges. Marshes and swamps stay in. Florida's land area of 34.6 million acres is the denominator.</p>
     </div>
     <div>
@@ -189,8 +193,9 @@ const $ = id => document.getElementById(id);
 const fmt = d3.format(',');
 const fmtM = v => v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e4 ? Math.round(v/1e3)+'k' : fmt(Math.round(v));
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const GROUP = c => c === 5 ? 'esmt' : c === 4 ? 'ngo' : 'gov';
-const LEVEL_NAMES = ['Federal','State','Water management district','Local government','Nonprofit / private','Conservation easement'];
+const OWN = ['public','private','nonprofit','tribal'], GROUPS = OWN;
+const OWN_NAMES = ['Public','Private','Nonprofit','Tribal'];
+const LEVEL_NAMES = ['Federal','State','Water management district','Local government','',''];
 const Q_NAMES = ['Parcel deed or closing date','Managed-area establishment year (estimated)','Earliest dated parcel in the same area (estimated)','No recorded date'];
 
 const [topo, meta] = await Promise.all([fetch('lands.json').then(r=>r.json()), fetch('meta.json').then(r=>r.json())]);
@@ -223,20 +228,20 @@ lands.forEach(f=>ringsToPath(f.geometry, new Path2D(), bounds));
 const feats = lands.map(f=>{
   const p = new Path2D(), bb=[Infinity,Infinity,-Infinity,-Infinity];
   ringsToPath(f.geometry, p, bb);
-  const o = f.properties; return {...o, g: GROUP(o.c), path:p, bb};
+  const o = f.properties; return {...o, g: OWN[o.o], path:p, bb};
 });
 // group paths: key = year|class|mil
 const groups = new Map();
 for (const f of feats){
-  const k = f.y+'|'+f.c+'|'+f.m;
-  if (!groups.has(k)) groups.set(k,{y:f.y,c:f.c,m:f.m,g:f.g,path:new Path2D(),feats:[]});
+  const k = f.y+'|'+f.c+'|'+f.o+'|'+f.e+'|'+f.m;
+  if (!groups.has(k)) groups.set(k,{y:f.y,c:f.c,m:f.m,g:f.g,e:f.e,path:new Path2D(),feats:[]});
   const gr = groups.get(k); gr.path.addPath(f.path); gr.feats.push(f);
 }
 const groupList = [...groups.values()].sort((a,b)=>a.y-b.y);
 
 // ---------- state ----------
-const S = { year: 2026, playing:false, speed:1, show:{gov:true,esmt:true,ngo:true}, mil:true, lvl:false, unk:false, sel:null };
-const minY = 1845, maxY = 2026;
+const S = { year: 2026, playing:false, speed:1, show:{public:true,private:true,nonprofit:true,tribal:true}, mil:true, lvl:false, unk:false, sel:null };
+const minY = 1900, maxY = 2026;
 
 // ---------- canvas map ----------
 const canvas = $('map'), ctx = canvas.getContext('2d'), box = $('mapbox');
@@ -265,8 +270,8 @@ function hatch(color, k){
 }
 let colors = {};
 function readColors(){
-  colors = {gov:css('--gov'),esmt:css('--esmt'),ngo:css('--ngo'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water')};
-  colors.lvl = [shade(colors.gov,-.28), colors.gov, shade(colors.gov,.32), shade(colors.gov,.55)];
+  colors = {public:css('--public'),private:css('--private'),nonprofit:css('--nonprofit'),tribal:css('--tribal'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water')};
+  colors.lvl = [shade(colors.public,-.28), colors.public, shade(colors.public,.32), shade(colors.public,.55)];
   hatchCache = {};
 }
 function shade(hex, t){ const c = d3.hsl(hex); c.l = c.l + (t>0 ? (1-c.l)*t : c.l*t); return c.formatHex(); }
@@ -276,8 +281,7 @@ function visible(gr){
   return true;
 }
 function fillFor(gr, k){
-  if (gr.g === 'esmt') return null; // handled separately
-  if (gr.g === 'gov' && S.lvl) return colors.lvl[gr.c];
+  if (gr.g === 'public' && S.lvl && gr.c < 4) return colors.lvl[gr.c];
   return colors[gr.g];
 }
 function draw(){
@@ -295,11 +299,12 @@ function draw(){
     if (gr.y === 0 && !S.unk) continue;
     if (!visible(gr)) continue;
     if (gr.y === 0){ ctx.fillStyle = hatch(colors.unk, k); ctx.fill(gr.path); continue; }
-    if (gr.g === 'esmt'){
-      ctx.globalAlpha = .28; ctx.fillStyle = colors.esmt; ctx.fill(gr.path); ctx.globalAlpha = 1;
-      ctx.fillStyle = hatch(colors.esmt, k); ctx.fill(gr.path);
-      ctx.lineWidth = px*0.9; ctx.strokeStyle = colors.esmt; ctx.stroke(gr.path);
-    } else { ctx.fillStyle = fillFor(gr,k); ctx.fill(gr.path); }
+    const col = fillFor(gr,k);
+    if (gr.e){
+      ctx.globalAlpha = .3; ctx.fillStyle = col; ctx.fill(gr.path); ctx.globalAlpha = 1;
+      ctx.fillStyle = hatch(col, k); ctx.fill(gr.path);
+      ctx.lineWidth = px*0.9; ctx.strokeStyle = col; ctx.stroke(gr.path);
+    } else { ctx.fillStyle = col; ctx.fill(gr.path); }
   }
   // newly acquired this year: outline
   for (const gr of groupList){
@@ -344,7 +349,8 @@ function showCard(f, sx, sy){
   card = document.createElement('div'); card.className = 'card';
   const yr = f.y === 0 ? 'Not recorded' : f.y + (f.k === 1 || f.k === 2 ? ' (est.)' : '');
   card.innerHTML = `<button class="x" aria-label="Close">×</button><h3></h3>
-    <dl><dt>Type</dt><dd>${LEVEL_NAMES[f.c]}${f.m?' · military':''}</dd>
+    <dl><dt>Owner</dt><dd>${OWN_NAMES[f.o]}${f.o===0 && f.c<4 ? ' · '+LEVEL_NAMES[f.c] : ''}${f.m?' · military':''}</dd>
+    <dt>Easement</dt><dd>${f.e ? 'Yes' : 'No'}</dd>
     <dt>Acquired</dt><dd>${yr}</dd><dt>This piece</dt><dd>${fmt(f.a)} ac</dd>
     <dt>Dated by</dt><dd>${Q_NAMES[f.k]}</dd></dl>`;
   card.querySelector('h3').textContent = meta.names[f.n];
@@ -364,13 +370,12 @@ function positionCard(){
 const years = d3.range(minY, maxY+1);
 const keyFor = (g, m) => g + (m ? '_m' : '');
 function cumulative(){
-  const acc = {gov:0,esmt:0,ngo:0}; const out = [];
-  for (const y of years){
+  const acc = {public:0,private:0,nonprofit:0,tribal:0,esmt:0}; const out = [];
+  for (let y = 1845; y <= maxY; y++){
     const s = meta.stats[y] || {};
-    for (const g of ['gov','esmt','ngo']){
-      acc[g] += (s[g]||0) + (S.mil ? (s[g+'_m']||0) : 0);
-    }
-    out.push({year:y, gov:acc.gov, esmt:acc.esmt, ngo:acc.ngo});
+    for (const g of GROUPS) acc[g] += (s[g]||0) + (S.mil ? (s[g+'_m']||0) : 0);
+    acc.esmt += meta.easement[y] || 0;
+    if (y >= minY) out.push({year:y, ...acc});
   }
   return out;
 }
@@ -387,14 +392,15 @@ for (const f of feats){
 function updatePanel(){
   const row = cum[S.year - minY];
   const vis = g => S.show[g] ? row[g] : 0;
-  for (const g of ['gov','esmt','ngo']) $('v-'+g).textContent = fmtM(row[g]);
-  const tot = vis('gov')+vis('esmt')+vis('ngo');
+  for (const g of GROUPS) $('v-'+g).textContent = fmtM(row[g]);
+  $('v-esmt').textContent = fmtM(row.esmt);
+  const tot = GROUPS.reduce((t,g)=>t+vis(g),0);
   $('share').textContent = (tot/LAND_AREA*100).toFixed(tot/LAND_AREA < .01 ? 2 : 1) + '%';
   $('acrestot').textContent = fmt(Math.round(tot));
   const spans = $('sharebar').children;
-  ['gov','esmt','ngo'].forEach((g,i)=> spans[i].style.width = (vis(g)/LAND_AREA*100)+'%');
+  GROUPS.forEach((g,i)=> spans[i].style.width = (vis(g)/LAND_AREA*100)+'%');
   $('stamp').textContent = S.year;
-  const u = meta.stats[0] || {}, ua = ['gov','esmt','ngo'].reduce((s,g)=>s + (S.show[g] ? (u[g]||0) + (S.mil ? (u[g+'_m']||0) : 0) : 0), 0);
+  const u = meta.stats[0] || {}, ua = GROUPS.reduce((s,g)=>s + (S.show[g] ? (u[g]||0) + (S.mil ? (u[g+'_m']||0) : 0) : 0), 0);
   $('unkline').textContent = ua ? `Another ${fmtM(ua)} acres have no recorded date and are not counted here.` : '';
   $('newh').textContent = 'Largest additions in ' + S.year;
   const m = addByYear.get(S.year), list = $('newlist'); list.innerHTML = '';
@@ -417,20 +423,24 @@ function drawChart(){
   svg.attr('viewBox',`0 0 ${w} ${h}`); svg.selectAll('*').remove();
   cw = w - M.l - M.r; chh = h - M.t - M.b;
   cx = d3.scaleLinear().domain([minY, maxY]).range([M.l, M.l+cw]);
-  const keys = ['gov','esmt','ngo'].filter(g=>S.show[g]);
+  const keys = GROUPS.filter(g=>S.show[g]);
   const stack = d3.stack().keys(keys)(cum);
   const ymax = d3.max(cum, d=>keys.reduce((s,k)=>s+d[k],0)) || 1;
   cy = d3.scaleLinear().domain([0, ymax]).nice(4).range([M.t+chh, M.t]);
   const g = svg.append('g').attr('class','grid');
   cy.ticks(4).forEach(t=>{ g.append('line').attr('x1',M.l).attr('x2',M.l+cw).attr('y1',cy(t)).attr('y2',cy(t));
     svg.append('text').attr('x',M.l-6).attr('y',cy(t)+4).attr('text-anchor','end').text(t===0?'0':(t/1e6)+'M'); });
-  const xt = w < 520 ? [1850,1900,1950,2000] : [1850,1875,1900,1925,1950,1975,2000,2025];
+  const xt = w < 520 ? [1900,1950,2000] : [1900,1920,1940,1960,1980,2000,2020];
   xt.forEach(t=>svg.append('text').attr('x',cx(t)).attr('y',h-6).attr('text-anchor','middle').text(t));
   const area = d3.area().x(d=>cx(d.data.year)).y0(d=>cy(d[0])).y1(d=>cy(d[1])).curve(d3.curveStepAfter);
   stack.forEach(s=>{
     const p = svg.append('path').attr('d', area(s)).attr('fill', `var(--${s.key})`);
-    if (s.key==='esmt') p.attr('fill-opacity',.85);
   });
+  // marker: the year 2000
+  const x2k = cx(2000), top2k = cy(keys.reduce((t,k)=>t+cum[2000-minY][k],0));
+  const mk = svg.append('g').attr('class','mark2k');
+  mk.append('path').attr('d',`M${x2k},${top2k-4} l-5,-9 h10 z`).attr('fill','var(--ink)');
+  mk.append('text').attr('x',x2k).attr('y',top2k-17).attr('text-anchor','middle').attr('fill','var(--ink)').style('font-weight',600).text('2000');
   // annotations
   const a = svg.append('g').attr('class','ann');
   const showAnn = w >= 640 ? ANN : ANN.filter(d=>[1947,1990,2001].includes(d[0]));
@@ -447,7 +457,7 @@ function drawChart(){
 }
 function moveCursor(){
   if (!cx) return;
-  const x = cx(S.year), keys = ['gov','esmt','ngo'].filter(g=>S.show[g]);
+  const x = cx(S.year), keys = GROUPS.filter(g=>S.show[g]);
   const row = cum[S.year-minY], top = keys.reduce((s,k)=>s+row[k],0);
   svg.select('#cur').attr('x1',x).attr('x2',x);
   svg.select('#curdot').attr('cx',x).attr('cy',cy(top));
@@ -463,7 +473,7 @@ svg.on('pointerdown', e=>{ scrubbing = true; svg.node().setPointerCapture(e.poin
    .on('pointermove', e=>{
      const y = yearAt(e.clientX); if (scrubbing) setYear(y);
      const row = cum[y-minY], r = svg.node().getBoundingClientRect(), pr = svg.node().parentNode.getBoundingClientRect();
-     const lines = [['gov','Government-owned'],['esmt','Easements'],['ngo','Nonprofit']].filter(([g])=>S.show[g])
+     const lines = [['public','Public'],['private','Private'],['nonprofit','Nonprofit'],['tribal','Tribal']].filter(([g])=>S.show[g])
        .map(([g,l])=>`<div><i style="background:var(--${g})"></i>${l}<span style="margin-left:auto;padding-left:12px">${fmt(Math.round(row[g]))} ac</span></div>`).join('');
      tip.innerHTML = `<b>${y}</b>${lines}`; tip.hidden = false;
      const x = e.clientX - pr.left; const tw = tip.offsetWidth;
@@ -505,7 +515,7 @@ document.addEventListener('keydown', e=>{
 });
 
 // toggles
-for (const g of ['gov','esmt','ngo']){
+for (const g of GROUPS){
   $('t-'+g).addEventListener('change', e=>{ S.show[g] = e.target.checked;
     e.target.closest('.row').classList.toggle('off', !e.target.checked); updatePanel(); drawChart(); draw(); });
 }
