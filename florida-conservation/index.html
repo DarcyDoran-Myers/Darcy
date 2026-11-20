@@ -7,7 +7,7 @@
 :root{
   --bg:#f3f5f1; --panel:#fbfcfa; --ink:#18221d; --ink2:#46534c; --muted:#6c7871; --rule:#d9dfd8;
   --water:#e3ebeb; --land:#fdfdf9; --county:#d4dad2; --coast:#9aa7a0;
-  --public:#2f7d4f; --other:#3a6fc0; --unk:#9aa29d; --dev:#f05a14; --esmt:#9bbd0a; --esmt2:#5f7400;
+  --public:#2f7d4f; --other:#3a6fc0; --unk:#9aa29d; --dev:#f05a14; --esmt:#bdb600;
   --hi:#18221d; --accent:#2f7d4f;
   --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -15,11 +15,11 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
   --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
-  --public:#2e9a66; --other:#5a86d0; --unk:#6a736e; --dev:#ff6a24; --esmt:#a8cc2a; --esmt2:#55690f; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}}
+  --public:#2e9a66; --other:#5a86d0; --unk:#6a736e; --dev:#ff6a24; --esmt:#d0ca2a; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
   --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
-  --public:#2e9a66; --other:#5a86d0; --unk:#6a736e; --dev:#ff6a24; --esmt:#a8cc2a; --esmt2:#55690f; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}
+  --public:#2e9a66; --other:#5a86d0; --unk:#6a736e; --dev:#ff6a24; --esmt:#d0ca2a; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
@@ -66,7 +66,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
 .sw.dev{background:var(--dev)}
 .devrow{border-top:1px solid var(--rule);padding-top:12px}
 .devrow .nm small{display:block;color:var(--muted);font-weight:400;font-size:12px}
-.sw.hatch{background:repeating-linear-gradient(135deg,var(--esmt2) 0 1.5px,var(--esmt) 1.5px 5px);border:1.5px solid var(--esmt2)}
+.sw.esmt{background:var(--esmt)}
 .ekey{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;border-top:1px dashed var(--rule);padding-top:10px;font-size:13px;color:var(--ink2)}
 .ekey b{font-family:var(--f-display);font-weight:600;font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
 .sw.unk{background:repeating-linear-gradient(45deg,var(--unk) 0 2px,transparent 2px 5px);border:1px solid var(--unk)}
@@ -138,7 +138,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
 
       <div class="tot" id="tot">
         <div class="row"><label><input type="checkbox" id="t-public" checked><span class="sw public"></span><span class="nm">Public<small>Federal, state, water district &amp; local government</small></span></label><span class="v" id="v-public">0</span></div>
-        <div class="row"><label><input type="checkbox" id="t-esmt" checked><span class="sw hatch"></span><span class="nm">Private conservation easement<small>Development rights retired; land stays in its owner's hands</small></span></label><span class="v" id="v-esmt">0</span></div>
+        <div class="row"><label><input type="checkbox" id="t-esmt" checked><span class="sw esmt"></span><span class="nm">Private conservation easement<small>Development rights retired; land stays in its owner's hands</small></span></label><span class="v" id="v-esmt">0</span></div>
         <div class="row"><label><input type="checkbox" id="t-other" checked><span class="sw other"></span><span class="nm">Other conservation lands<small>Nonprofit, tribal &amp; private preserves</small></span></label><span class="v" id="v-other">0</span></div>
       </div>
 
@@ -173,7 +173,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
   <div class="notes">
     <div>
       <h3>What's counted</h3>
-      <p>The footprint is the Florida Natural Areas Inventory's <a href="https://www.fnai.org/species-communities/conservation-lands" target="_blank" rel="noopener">Florida Conservation Lands</a> layer, the state's standard list of managed conservation areas. Public means fee title held by a federal, state, water management district or local agency. Private conservation easements are land where an agency or land trust holds the development rights while the owner keeps the land; nearly all of it is privately owned, and every easement is counted here whoever holds title. Other conservation lands are nonprofit, tribal and private preserves owned outright. The one tribal area in the inventory, the Miccosukee Tribe's 46,000-acre conservation area in the Everglades, is held under an easement and is counted with easements.</p>
+      <p>The footprint is the Florida Natural Areas Inventory's <a href="https://www.fnai.org/species-communities/conservation-lands" target="_blank" rel="noopener">Florida Conservation Lands</a> layer, the state's standard list of managed conservation areas. Public means fee title held by a federal, state, water management district or local agency. Private conservation easements are land where an agency or land trust holds the development rights while the owner keeps the land; nearly all of it is privately owned, and every easement is counted here whoever holds title, except the tribal one. Other conservation lands are nonprofit, tribal and private preserves owned outright. The one tribal area in the inventory, the Miccosukee Tribe's 46,000-acre conservation area in the Everglades, comes from a 1982 land-claims settlement rather than an ordinary easement sale, so it is counted with other conservation lands.</p>
       <p>Open water is removed: the Gulf, the Atlantic, Florida Bay and other estuaries outside FDEP’s 1:12,000 shoreline, plus Lake Okeechobee and every lake or river wider than about 1,000 acres. That takes out about 2.1 million acres, mostly in Everglades, Biscayne and the Keys refuges. Marshes and swamps stay in. Florida's land area of 34.6 million acres is the denominator.</p>
     </div>
     <div>
@@ -257,7 +257,7 @@ lands.forEach(f=>ringsToPath(f.geometry, new Path2D(), bounds));
 const feats = lands.map(f=>{
   const p = new Path2D(), bb=[Infinity,Infinity,-Infinity,-Infinity];
   ringsToPath(f.geometry, p, bb);
-  const o = f.properties; return {...o, g: o.e ? 'esmt' : o.o === 0 ? 'public' : 'other', path:p, bb};
+  const o = f.properties; return {...o, g: (o.e && o.o !== 3) ? 'esmt' : o.o === 0 ? 'public' : 'other', path:p, bb};
 });
 // group paths: key = year|class|mil
 const groups = new Map();
@@ -300,7 +300,7 @@ function hatch(color, k){
 let colors = {};
 function readColors(){
   devYearDrawn = -1;
-  colors = {public:css('--public'),other:css('--other'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water'),dev:css('--dev'),esmt:css('--esmt'),esmt2:css('--esmt2')};
+  colors = {public:css('--public'),other:css('--other'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water'),dev:css('--dev'),esmt:css('--esmt')};
   colors.lvl = [shade(colors.public,-.28), colors.public, shade(colors.public,.32), shade(colors.public,.55)];
   hatchCache = {};
 }
@@ -335,11 +335,7 @@ function draw(){
     if (!visible(gr)) continue;
     if (gr.y === 0){ ctx.fillStyle = hatch(colors.unk, k); ctx.fill(gr.path); continue; }
     const col = fillFor(gr,k);
-    if (gr.e){
-      ctx.fillStyle = colors.esmt; ctx.fill(gr.path);
-      ctx.globalAlpha = .55; ctx.fillStyle = hatch(colors.esmt2, k); ctx.fill(gr.path); ctx.globalAlpha = 1;
-      ctx.lineWidth = px*0.9; ctx.strokeStyle = colors.esmt2; ctx.stroke(gr.path);
-    } else { ctx.fillStyle = col; ctx.fill(gr.path); }
+    ctx.fillStyle = col; ctx.fill(gr.path);
   }
   // newly acquired this year: outline
   for (const gr of groupList){

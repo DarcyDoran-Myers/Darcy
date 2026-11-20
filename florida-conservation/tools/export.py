@@ -74,7 +74,7 @@ lk = lk.explode(index_parts=False); lk = lk[lk.area > 4e6]
 lk.to_file(W + 'web_lakes.geojson', driver='GeoJSON')
 
 esm = o[(o.cls == 'esmt') & ~o.mil].groupby('year').acres.sum()
-o['g3'] = np.where(o.cls == 'esmt', 'esmt', np.where(o.own == 'public', 'public', 'other'))
+o['g3'] = np.where((o.cls == 'esmt') & (o.own != 'tribal'), 'esmt', np.where(o.own == 'public', 'public', 'other'))
 st3 = o.groupby(['year', 'g3', 'mil']).acres.sum()
 stats3 = {}
 for (y, g, m), v in st3.items():
