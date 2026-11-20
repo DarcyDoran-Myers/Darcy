@@ -10,7 +10,7 @@ await p.route('http://v.test/**',r=>{const u=new URL(r.request().url()).pathname
  if(u.endsWith('d3.min.js'))return r.fulfill({path:N+'d3/dist/d3.min.js'});
  if(u.endsWith('topojson-client.min.js'))return r.fulfill({path:N+'topojson-client/dist/topojson-client.min.js'});
  const m=u.match(/fonts\/(.+)\.woff2$/); if(m)return r.fulfill({path:N+FONTS[m[1]],contentType:'font/woff2'});
- if(u.endsWith('lands.json')||u.endsWith('meta.json'))return r.fulfill({path:D+u.split('/').pop()});
+ if(u.endsWith('lands.json')||u.endsWith('meta.json')||u.endsWith('developed.bin'))return r.fulfill({path:D+u.split('/').pop()});
  return r.fulfill({path:D+'video/render.html',contentType:'text/html'});});
 await p.goto('http://v.test/video/render.html');
 const n=await p.evaluate(f=>window.setup(f),fmt); console.log('frames',n);

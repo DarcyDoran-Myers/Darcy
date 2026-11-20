@@ -15,7 +15,7 @@ canvas{display:block}
 /* Frame-by-frame renderer for the social video. Call window.setup(format) then window.renderFrame(i). */
 const C = {
   bg:'#0d1211', land:'#1b2421', county:'#28332f', coast:'#33403b', water:'#0d1211',
-  public:'#2e9a66', private:'#b5801c', nonprofit:'#5a86d0', tribal:'#c4618a', hi:'#ffffff',
+  public:'#2e9a66', private:'#b5801c', nonprofit:'#5a86d0', tribal:'#c4618a', dev:'#d9d6e0', hi:'#ffffff',
   ink:'#eef2ee', ink2:'#b4bfb8', muted:'#7f8b84', rule:'#26302d'
 };
 const FD = '"Barlow Semi Condensed", "Arial Narrow", sans-serif', FB = '"Public Sans", system-ui, sans-serif';
@@ -31,9 +31,19 @@ function yearAt(t){
     if (t <= t1) return y0 + (y1-y0)*((t-t0)/(t1-t0)); }
   return MAXY;
 }
+let devMeta, DEV, devCanvas, devCtx, devImg, devDrawn = -1;
+const devAcres = y => devMeta.yearly[Math.min(Math.max(Math.floor(y),1900),2021)] || 0;
 let cv, ctx, W, H, L, groups, statePath, countyPath, lakePath, bounds, cum, meta, featByYear;
 async function load(){
-  const [topo, m] = await Promise.all([fetch('../lands.json').then(r=>r.json()), fetch('../meta.json').then(r=>r.json())]);
+  const [topo, m, dm, db] = await Promise.all([fetch('../lands.json').then(r=>r.json()), fetch('../meta.json').then(r=>r.json()),
+    fetch('../developed_meta.json').then(r=>r.json()), fetch('../developed.bin').then(r=>r.arrayBuffer())]);
+  devMeta = dm; const b = new Uint8Array(db), n = dm.n;
+  DEV = {idx:new Uint32Array(n), F:new Uint8Array(n), Q:new Uint8Array(n*4), n};
+  let p = 0, cur = 0;
+  for (let i=0;i<n;i++){ let v=0, sh=0, byte; do { byte=b[p++]; v |= (byte&0x7f)<<sh; sh+=7; } while(byte&0x80);
+    cur += v; DEV.idx[i]=cur; DEV.F[i]=b[p++]; for (let k=0;k<4;k++) DEV.Q[i*4+k]=b[p++]; }
+  devCanvas = document.createElement('canvas'); devCanvas.width = dm.nx; devCanvas.height = dm.ny;
+  devCtx = devCanvas.getContext('2d'); devImg = devCtx.createImageData(dm.nx, dm.ny);
   meta = m;
   const ring = (geom, p, bb) => {
     const polys = geom.type==='Polygon' ? [geom.coordinates] : geom.type==='MultiPolygon' ? geom.coordinates : [];
@@ -68,7 +78,7 @@ function layout(fmt){
     return { map:[40,330,1000,1240], title:[64,120], stats:[64,1010], year:[64,980], chart:[64,1610,952,190], src:[64,1868], ann:[64,375] };
   }
   W=1080; H=1080;
-  return { map:[300,80,760,880], title:[56,92], stats:[56,560], year:[56,530], chart:[56,940,968,92], src:[56,1056], ann:[56,180] };
+  return { map:[300,80,760,880], title:[56,92], stats:[56,520], year:[56,490], chart:[56,940,968,92], src:[56,1056], ann:[56,180] };
 }
 let LAY, FMT, hatch;
 window.setup = async function(fmt){
@@ -97,6 +107,13 @@ window.renderFrame = function(i){
   const k = Math.min(mw/bw, mh/bh), ox = mx + (mw-bw*k)/2 - bounds[0]*k, oy = my + (mh-bh*k)/2 + bounds[3]*k;
   ctx.setTransform(k,0,0,-k,ox,oy); const px = 1/k;
   ctx.fillStyle=C.land; ctx.fill(statePath); ctx.fillStyle=C.water; ctx.fill(lakePath);
+  { const yo = Math.min(yr, 2021) - 1900;
+    if (yo !== devDrawn){ const c = d3.rgb(C.dev), d = devImg.data;
+      for (let i=0;i<DEV.n;i++){ const q=i*4, kq=(DEV.Q[q]<=yo)+(DEV.Q[q+1]<=yo)+(DEV.Q[q+2]<=yo)+(DEV.Q[q+3]<=yo), o=DEV.idx[i]*4;
+        d[o]=c.r; d[o+1]=c.g; d[o+2]=c.b; d[o+3]= kq ? Math.min(255, 30 + DEV.F[i]*kq/4*0.8) : 0; }
+      devCtx.putImageData(devImg,0,0); devDrawn = yo; }
+    ctx.save(); ctx.translate(devMeta.x0, devMeta.y0); ctx.scale(devMeta.res, -devMeta.res);
+    ctx.imageSmoothingEnabled = true; ctx.drawImage(devCanvas, 0, 0); ctx.restore(); }
   ctx.lineWidth=px*1; ctx.strokeStyle=C.county; ctx.stroke(countyPath);
   for (const g of groups){
     if (g.y > yr) break;
@@ -117,21 +134,25 @@ window.renderFrame = function(i){
   // ---- title ----
   const [tx,ty] = LAY.title;
   text('FLORIDA · 1900 TO TODAY', tx, ty-50, `600 ${V?30:22}px ${FD}`, C.muted);
-  text(V?'Every acre Florida':'Every acre Florida has conserved,', tx, ty+(V?10:0), `700 ${V?76:46}px ${FD}`, C.ink);
-  text(V?'has conserved, by the':'by the year it was acquired', tx, ty+(V?92:52), `700 ${V?76:46}px ${FD}`, C.ink);
-  if (V) text('year it was acquired', tx, ty+174, `700 76px ${FD}`, C.ink);
+  text(V?'Florida’s conserved':'Florida’s conserved and developed', tx, ty+(V?10:0), `700 ${V?76:46}px ${FD}`, C.ink);
+  text(V?'and developed land,':'land, year by year', tx, ty+(V?92:52), `700 ${V?76:46}px ${FD}`, C.ink);
+  if (V) text('year by year', tx, ty+174, `700 76px ${FD}`, C.ink);
 
   // ---- big year + counters (sit in the empty Gulf) ----
   const [sx,sy] = LAY.stats;
   text(String(yr), sx, sy, `700 ${V?200:150}px ${FD}`, C.ink);
-  const sw = V?30:22, gap = V?78:60;
+  const sw = V?30:22, gap = V?74:52;
   OWN.forEach((g,j)=>{
     const y0 = sy + (V?58:44) + j*gap;
     ctx.fillStyle=C[g]; ctx.fillRect(sx,y0,sw,sw);
     text(OWN_NAMES[g==='public'?0:g==='private'?1:g==='nonprofit'?2:3], sx+sw+(V?16:12), y0+sw*.38, `400 ${V?24:18}px ${FB}`, C.ink2, 'left','middle');
     text(fmtAc(row[g])+' acres', sx+sw+(V?16:12), y0+sw*1.45, `600 ${V?36:27}px ${FD}`, C.ink, 'left','middle');
   });
-  { const y0 = sy + (V?58:44) + 4*gap + (V?6:2);
+  { const y0 = sy + (V?58:44) + 4*gap + (V?10:6);
+    ctx.fillStyle=C.dev; ctx.fillRect(sx,y0,sw,sw);
+    text(yr > 2021 ? 'Developed (through 2021)' : 'Developed', sx+sw+(V?16:12), y0+sw*.38, `400 ${V?24:18}px ${FB}`, C.ink2, 'left','middle');
+    text(fmtAc(devAcres(yf))+' acres', sx+sw+(V?16:12), y0+sw*1.45, `600 ${V?36:27}px ${FD}`, C.ink, 'left','middle'); }
+  { const y0 = sy + (V?58:44) + 5*gap + (V?16:10);
     const hp = hatch.key; hp.setTransform(new DOMMatrix()); ctx.fillStyle=hp; ctx.fillRect(sx,y0,sw,sw);
     ctx.strokeStyle=C.ink2; ctx.lineWidth=1.5; ctx.strokeRect(sx+.75,y0+.75,sw-1.5,sw-1.5);
     text('Hatched: conservation easement', sx+sw+(V?16:12), y0+sw/2, `400 ${V?24:18}px ${FB}`, C.ink2, 'left','middle'); }
@@ -158,10 +179,12 @@ window.renderFrame = function(i){
     for (let y=MINY; y<=yr; y++){ ctx.lineTo(X(y), Y(fn(cum[y-MINY]))); ctx.lineTo(X(y+1>yr?yf:y+1), Y(fn(cum[y-MINY]))); }
     ctx.lineTo(X(yf), Y(0)); ctx.closePath(); ctx.fillStyle = C[g]; ctx.fill();
   }
+  ctx.beginPath(); for (let y=MINY; y<=Math.floor(yf); y++){ const px=X(y), py=Y(devAcres(y)); y===MINY?ctx.moveTo(px,py):ctx.lineTo(px,py); }
+  ctx.lineTo(X(yf), Y(devAcres(yf))); ctx.strokeStyle=C.dev; ctx.lineWidth=V?4:3; ctx.stroke();
   ctx.globalAlpha=holdFade; ctx.fillStyle=C.hi; ctx.fillRect(X(yf)-1.5, cy-4, 3, ch+4); ctx.globalAlpha=1;
   const tickY = cy+ch+(V?32:0);
   if (V) [1900,1950,2000].forEach(y=>text(String(y), X(y), tickY, `400 22px ${FB}`, C.muted, 'center'));
-  text(`${(tot/1e6).toFixed(1)}M acres`, cx, cy-(V?14:10), `600 ${V?28:20}px ${FD}`, C.ink2);
+  text(`${(tot/1e6).toFixed(1)}M acres conserved · ${(devAcres(yf)/1e6).toFixed(1)}M developed`, cx, cy-(V?14:10), `600 ${V?28:20}px ${FD}`, C.ink2);
   // arrow marking 2000 (appears once the line reaches it)
   if (yf >= 2000){
     const r2k = cum[2000-MINY], top = Y(OWN.reduce((s,k)=>s+r2k[k],0)), x2 = X(2000), s2 = V?1:0.8;
@@ -173,6 +196,6 @@ window.renderFrame = function(i){
 
   // ---- source ----
   const [srx,sry] = LAY.src;
-  text('Data: FNAI Florida Conservation Lands · FL DEP state lands · Florida Forever · USGS PAD-US 4.1', srx, sry, `400 ${V?22:16}px ${FB}`, C.muted);
+  text('Data: FNAI · FL DEP state lands · Florida Forever · USGS PAD-US · USGS NLCD · HISDAC-US', srx, sry, `400 ${V?22:16}px ${FB}`, C.muted);
 };
 </script></body></html>

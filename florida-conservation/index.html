@@ -7,7 +7,7 @@
 :root{
   --bg:#f3f5f1; --panel:#fbfcfa; --ink:#18221d; --ink2:#46534c; --muted:#6c7871; --rule:#d9dfd8;
   --water:#e3ebeb; --land:#fdfdf9; --county:#d4dad2; --coast:#9aa7a0;
-  --public:#2f7d4f; --private:#b97d0c; --nonprofit:#3a6fc0; --tribal:#b04a72; --unk:#9aa29d;
+  --public:#2f7d4f; --private:#b97d0c; --nonprofit:#3a6fc0; --tribal:#b04a72; --unk:#9aa29d; --dev:#3d3b45;
   --hi:#18221d; --accent:#2f7d4f;
   --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -15,11 +15,11 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
   --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
-  --public:#2e9a66; --private:#b5801c; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}}
+  --public:#2e9a66; --private:#b5801c; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --dev:#d9d6e0; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
   --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
-  --public:#2e9a66; --private:#b5801c; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}
+  --public:#2e9a66; --private:#b5801c; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --dev:#d9d6e0; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
@@ -63,6 +63,9 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
 .row .v{font-family:var(--f-display);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums;text-align:right}
 .sw{width:18px;height:18px;border-radius:3px;display:block}
 .sw.public{background:var(--public)} .sw.private{background:var(--private)} .sw.nonprofit{background:var(--nonprofit)} .sw.tribal{background:var(--tribal)}
+.sw.dev{background:var(--dev)}
+.devrow{border-top:1px solid var(--rule);padding-top:12px}
+.devrow .nm small{display:block;color:var(--muted);font-weight:400;font-size:12px}
 .sw.hatch{background:repeating-linear-gradient(135deg,var(--ink2) 0 2px,transparent 2px 5px);border:1.5px solid var(--ink2)}
 .ekey{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;border-top:1px dashed var(--rule);padding-top:10px;font-size:13px;color:var(--ink2)}
 .ekey b{font-family:var(--f-display);font-weight:600;font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -108,7 +111,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
     <div>
       <div class="eyebrow">Florida conservation lands · 1900 to today</div>
       <h1>Florida Lands Conserved</h1>
-      <p class="sub">Every acre in Florida's statewide inventory of conservation lands, placed on the map in the year it was acquired. Press play to watch it accumulate since 1900, by who owns the land.</p>
+      <p class="sub">Every acre in Florida's statewide inventory of conservation lands, placed on the map in the year it was acquired. Press play to watch it accumulate since 1900, by who owns the land, alongside the spread of developed land.</p>
     </div>
   </header>
 
@@ -141,6 +144,8 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
         <div class="ekey"><span class="sw hatch"></span><span>Hatched: protected by a conservation easement</span><b id="v-esmt">0</b></div>
       </div>
 
+      <div class="row devrow"><label><input type="checkbox" id="t-dev" checked><span class="sw dev"></span><span class="nm">Developed land<small id="devsub">Roofs, roads &amp; pavement covering 20%+ of the ground</small></span></label><span class="v" id="v-dev">0</span></div>
+
       <div class="share">
         <div class="eyebrow">Share of Florida's land area</div>
         <div class="big" id="share">0%</div>
@@ -162,8 +167,8 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
   </div>
 
   <div class="chartbox">
-    <div class="hd"><h2>Cumulative acres conserved</h2><span class="eyebrow">Click or drag to set the year</span></div>
-    <svg id="chart" role="img" aria-label="Stacked area chart of cumulative conserved acres by year"></svg>
+    <div class="hd"><h2>Cumulative acres conserved and developed</h2><span class="eyebrow">Click or drag to set the year</span></div>
+    <svg id="chart" role="img" aria-label="Stacked area chart of cumulative conserved acres by year, with a line for developed acres"></svg>
     <div class="tip" id="tip" hidden></div>
   </div>
 
@@ -178,8 +183,13 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
       <p id="qnote">Each piece of the footprint takes the earliest date from parcel records that cover it: deed dates in DEP's state-owned lands inventory (FL‑SOLARIS), closing dates of Florida Forever acquisitions, and establishment dates in USGS PAD‑US 4.1, which carries the National Conservation Easement Database. Where no parcel record exists, the managed area's establishment year is used and marked as estimated.</p>
     </div>
     <div>
+      <h3>How developed land is mapped</h3>
+      <p>Developed land is every 250 m cell's share of ground covered at least 20% by roofs, roads or pavement in the USGS National Land Cover Database impervious-surface maps, the threshold NLCD uses for developed land. Darker cells are more completely built over. Growth after 2001 follows the NLCD surveys of 2001, 2006, 2011, 2016 and 2021, and the layer stops growing after 2021.</p>
+      <p>Development before 2001 is timed by the year each building was built, from county property records compiled in HISDAC-US (University of Colorado Boulder). Roads, airports and cells without building records take the average timing of dated cells around them; that is 17% of today's developed area. Demolished buildings drop out of property records, so development before about 1950 is undercounted.</p>
+    </div>
+    <div>
       <h3>Sources</h3>
-      <p>FNAI Florida Conservation Lands (2025 web service) · Florida DEP Division of State Lands, FL‑SOLARIS state-owned lands · FNAI Florida Forever Acquisitions · USGS Gap Analysis Project, PAD‑US 4.1 Florida · FDEP Florida Counties with Shoreline (1:12,000) · Esri USA Detailed Water Bodies. Retrieved November 2026. Parcel shapes are simplified to about 35 m.</p>
+      <p>FNAI Florida Conservation Lands (2025 web service) · Florida DEP Division of State Lands, FL‑SOLARIS state-owned lands · FNAI Florida Forever Acquisitions · USGS Gap Analysis Project, PAD‑US 4.1 Florida · FDEP Florida Counties with Shoreline (1:12,000) · Esri USA Detailed Water Bodies · USGS/MRLC NLCD impervious surface 2001–2021 · HISDAC-US built-up property records and first-built year, Version II (Leyk, Uhl et al., Harvard Dataverse). Retrieved November 2026. Parcel shapes are simplified to about 35 m.</p>
     </div>
   </div>
 </div>
@@ -198,7 +208,28 @@ const OWN_NAMES = ['Public','Private','Nonprofit','Tribal'];
 const LEVEL_NAMES = ['Federal','State','Water management district','Local government','',''];
 const Q_NAMES = ['Parcel deed or closing date','Managed-area establishment year (estimated)','Earliest dated parcel in the same area (estimated)','No recorded date'];
 
-const [topo, meta] = await Promise.all([fetch('lands.json').then(r=>r.json()), fetch('meta.json').then(r=>r.json())]);
+const [topo, meta, devMeta, devBuf] = await Promise.all([fetch('lands.json').then(r=>r.json()), fetch('meta.json').then(r=>r.json()),
+  fetch('developed_meta.json').then(r=>r.json()), fetch('developed.bin').then(r=>r.arrayBuffer())]);
+// developed cells: varint index delta, then share developed (0-255) and the years 25/50/75/100% of it was reached
+const DEV = (()=>{ const b = new Uint8Array(devBuf), n = devMeta.n;
+  const idx = new Uint32Array(n), F = new Uint8Array(n), Q = new Uint8Array(n*4);
+  let p = 0, cur = 0;
+  for (let i=0;i<n;i++){ let v=0, sh=0, byte; do { byte=b[p++]; v |= (byte&0x7f)<<sh; sh+=7; } while(byte&0x80);
+    cur += v; idx[i]=cur; F[i]=b[p++]; Q[i*4]=b[p++]; Q[i*4+1]=b[p++]; Q[i*4+2]=b[p++]; Q[i*4+3]=b[p++]; }
+  return {idx,F,Q,n}; })();
+const devCanvas = document.createElement('canvas'); devCanvas.width = devMeta.nx; devCanvas.height = devMeta.ny;
+const devCtx = devCanvas.getContext('2d'); const devImg = devCtx.createImageData(devMeta.nx, devMeta.ny);
+let devYearDrawn = -1, devColorDrawn = '';
+function paintDev(year, color){
+  if (year === devYearDrawn && color === devColorDrawn) return;
+  const c = d3.rgb(color), d = devImg.data, yo = Math.min(year, 2021) - 1900;
+  for (let i=0;i<DEV.n;i++){
+    const q = i*4, k = (DEV.Q[q]<=yo) + (DEV.Q[q+1]<=yo) + (DEV.Q[q+2]<=yo) + (DEV.Q[q+3]<=yo);
+    const o = DEV.idx[i]*4; d[o]=c.r; d[o+1]=c.g; d[o+2]=c.b; d[o+3] = k ? Math.min(255, 40 + DEV.F[i]*k/4*0.85) : 0;
+  }
+  devCtx.putImageData(devImg, 0, 0); devYearDrawn = year; devColorDrawn = color;
+}
+const devAcres = y => devMeta.yearly[Math.min(Math.max(y,1900),2021)] || 0;
 $('loading').remove();
 
 // ---------- geometry -> Path2D, grouped by year/class ----------
@@ -240,7 +271,7 @@ for (const f of feats){
 const groupList = [...groups.values()].sort((a,b)=>a.y-b.y);
 
 // ---------- state ----------
-const S = { year: 2026, playing:false, speed:1, show:{public:true,private:true,nonprofit:true,tribal:true}, mil:true, lvl:false, unk:false, sel:null };
+const S = { year: 2026, playing:false, speed:1, dev:true, show:{public:true,private:true,nonprofit:true,tribal:true}, mil:true, lvl:false, unk:false, sel:null };
 const minY = 1900, maxY = 2026;
 
 // ---------- canvas map ----------
@@ -270,7 +301,8 @@ function hatch(color, k){
 }
 let colors = {};
 function readColors(){
-  colors = {public:css('--public'),private:css('--private'),nonprofit:css('--nonprofit'),tribal:css('--tribal'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water')};
+  devYearDrawn = -1;
+  colors = {public:css('--public'),private:css('--private'),nonprofit:css('--nonprofit'),tribal:css('--tribal'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water'),dev:css('--dev')};
   colors.lvl = [shade(colors.public,-.28), colors.public, shade(colors.public,.32), shade(colors.public,.55)];
   hatchCache = {};
 }
@@ -292,6 +324,11 @@ function draw(){
   const px = 1/k; // one css pixel in data units
   ctx.fillStyle = colors.land; ctx.fill(statePath);
   ctx.fillStyle = colors.water; ctx.fill(lakePath);
+  if (S.dev){
+    paintDev(S.year, colors.dev);
+    ctx.save(); ctx.translate(devMeta.x0, devMeta.y0); ctx.scale(devMeta.res, -devMeta.res);
+    ctx.imageSmoothingEnabled = devMeta.res*k < 2.5; ctx.drawImage(devCanvas, 0, 0); ctx.restore();
+  }
   ctx.lineWidth = px*0.8; ctx.strokeStyle = colors.county; ctx.stroke(countyPath);
   const yr = S.year;
   for (const gr of groupList){
@@ -400,6 +437,8 @@ function updatePanel(){
   const spans = $('sharebar').children;
   GROUPS.forEach((g,i)=> spans[i].style.width = (vis(g)/LAND_AREA*100)+'%');
   $('stamp').textContent = S.year;
+  $('v-dev').textContent = fmtM(devAcres(S.year));
+  $('devsub').textContent = S.year > 2021 ? 'Through 2021, the latest satellite survey' : 'Roofs, roads & pavement covering 20%+ of the ground';
   const u = meta.stats[0] || {}, ua = GROUPS.reduce((s,g)=>s + (S.show[g] ? (u[g]||0) + (S.mil ? (u[g+'_m']||0) : 0) : 0), 0);
   $('unkline').textContent = ua ? `Another ${fmtM(ua)} acres have no recorded date and are not counted here.` : '';
   $('newh').textContent = 'Largest additions in ' + S.year;
@@ -425,7 +464,7 @@ function drawChart(){
   cx = d3.scaleLinear().domain([minY, maxY]).range([M.l, M.l+cw]);
   const keys = GROUPS.filter(g=>S.show[g]);
   const stack = d3.stack().keys(keys)(cum);
-  const ymax = d3.max(cum, d=>keys.reduce((s,k)=>s+d[k],0)) || 1;
+  const ymax = Math.max(d3.max(cum, d=>keys.reduce((s,k)=>s+d[k],0)) || 1, S.dev ? devAcres(2021) : 0);
   cy = d3.scaleLinear().domain([0, ymax]).nice(4).range([M.t+chh, M.t]);
   const g = svg.append('g').attr('class','grid');
   cy.ticks(4).forEach(t=>{ g.append('line').attr('x1',M.l).attr('x2',M.l+cw).attr('y1',cy(t)).attr('y2',cy(t));
@@ -436,6 +475,11 @@ function drawChart(){
   stack.forEach(s=>{
     const p = svg.append('path').attr('d', area(s)).attr('fill', `var(--${s.key})`);
   });
+  if (S.dev){
+    const dl = d3.line().x(d=>cx(d)).y(d=>cy(devAcres(d)));
+    svg.append('path').attr('d', dl(d3.range(minY, maxY+1))).attr('fill','none').attr('stroke','var(--dev)').attr('stroke-width',2.5).attr('stroke-dasharray', null);
+    svg.append('text').attr('x', cx(2021)-4).attr('y', cy(devAcres(2021))-8).attr('text-anchor','end').attr('fill','var(--ink)').style('font-weight',600).text('Developed');
+  }
   // marker: the year 2000
   const x2k = cx(2000), top2k = cy(keys.reduce((t,k)=>t+cum[2000-minY][k],0));
   const mk = svg.append('g').attr('class','mark2k');
@@ -474,7 +518,8 @@ svg.on('pointerdown', e=>{ scrubbing = true; svg.node().setPointerCapture(e.poin
      const y = yearAt(e.clientX); if (scrubbing) setYear(y);
      const row = cum[y-minY], r = svg.node().getBoundingClientRect(), pr = svg.node().parentNode.getBoundingClientRect();
      const lines = [['public','Public'],['private','Private'],['nonprofit','Nonprofit'],['tribal','Tribal']].filter(([g])=>S.show[g])
-       .map(([g,l])=>`<div><i style="background:var(--${g})"></i>${l}<span style="margin-left:auto;padding-left:12px">${fmt(Math.round(row[g]))} ac</span></div>`).join('');
+       .map(([g,l])=>`<div><i style="background:var(--${g})"></i>${l}<span style="margin-left:auto;padding-left:12px">${fmt(Math.round(row[g]))} ac</span></div>`).join('')
+       + (S.dev ? `<div><i style="background:var(--dev)"></i>Developed${y>2021?' (2021)':''}<span style="margin-left:auto;padding-left:12px">${fmt(devAcres(y))} ac</span></div>` : '');
      tip.innerHTML = `<b>${y}</b>${lines}`; tip.hidden = false;
      const x = e.clientX - pr.left; const tw = tip.offsetWidth;
      tip.style.left = (x + 14 + tw > pr.width ? x - tw - 14 : x + 14) + 'px'; tip.style.top = (r.top - pr.top + 30) + 'px';
@@ -522,6 +567,7 @@ for (const g of GROUPS){
 $('o-mil').addEventListener('change', e=>{ S.mil = e.target.checked; cum = cumulative(); updatePanel(); drawChart(); draw(); });
 $('o-govlvl').addEventListener('change', e=>{ S.lvl = e.target.checked; draw(); });
 $('o-unk').addEventListener('change', e=>{ S.unk = e.target.checked; draw(); });
+$('t-dev').addEventListener('change', e=>{ S.dev = e.target.checked; e.target.closest('.row').classList.toggle('off', !e.target.checked); drawChart(); draw(); });
 
 const qa = meta.qacres, qt = Object.values(qa).reduce((a,b)=>a+b,0);
 $('qnote').textContent += ` By area, ${Math.round((qa.parcel||0)/qt*100)}% is dated from parcel records, ${Math.round(((qa.unit||0)+(qa.est||0))/qt*100)}% is estimated, and ${((qa.none||0)/qt*100).toFixed(1)}% has no date and is hidden unless you turn it on.`;
