@@ -24,7 +24,7 @@ lakes/rivers ≥ ~1,000 acres from Esri USA Detailed Water Bodies (`tools/landcl
 
 ## Developed land
 
-`developed.bin` / `developed_meta.json`: 250 m cells (EPSG:3086) with the share of ground ≥ 20 % impervious in
+`developed.b64.txt` (base64 of the binary) / `developed_meta.json`: 250 m cells (EPSG:3086) with the share of ground ≥ 20 % impervious in
 NLCD 2021 and the years when 25/50/75/100 % of that share was reached. Post-2001 timing from NLCD impervious
 2001/2006/2011/2016/2021 (MRLC WCS, `tools/nlcd.py`); pre-2001 timing from HISDAC-US Version II built-up
 property records and first-built year (`tools/devmodel.py`). Cells without building records take the mean

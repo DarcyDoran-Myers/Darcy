@@ -36,7 +36,7 @@ const devAcres = y => devMeta.yearly[Math.min(Math.max(Math.floor(y),1900),2021)
 let cv, ctx, W, H, L, groups, statePath, countyPath, lakePath, bounds, cum, meta, featByYear;
 async function load(){
   const [topo, m, dm, db] = await Promise.all([fetch('../lands.json').then(r=>r.json()), fetch('../meta.json').then(r=>r.json()),
-    fetch('../developed_meta.json').then(r=>r.json()), fetch('../developed.bin').then(r=>r.arrayBuffer())]);
+    fetch('../developed_meta.json').then(r=>r.json()), fetch('../developed.b64.txt').then(r=>r.text()).then(t=>Uint8Array.from(atob(t.trim()), c=>c.charCodeAt(0)).buffer)]);
   devMeta = dm; const b = new Uint8Array(db), n = dm.n;
   DEV = {idx:new Uint32Array(n), F:new Uint8Array(n), Q:new Uint8Array(n*4), n};
   let p = 0, cur = 0;

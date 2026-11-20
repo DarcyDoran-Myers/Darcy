@@ -209,7 +209,7 @@ const LEVEL_NAMES = ['Federal','State','Water management district','Local govern
 const Q_NAMES = ['Parcel deed or closing date','Managed-area establishment year (estimated)','Earliest dated parcel in the same area (estimated)','No recorded date'];
 
 const [topo, meta, devMeta, devBuf] = await Promise.all([fetch('lands.json').then(r=>r.json()), fetch('meta.json').then(r=>r.json()),
-  fetch('developed_meta.json').then(r=>r.json()), fetch('developed.bin').then(r=>r.arrayBuffer())]);
+  fetch('developed_meta.json').then(r=>r.json()), fetch('developed.b64.txt').then(r=>r.text()).then(t=>Uint8Array.from(atob(t.trim()), c=>c.charCodeAt(0)).buffer)]);
 // developed cells: varint index delta, then share developed (0-255) and the years 25/50/75/100% of it was reached
 const DEV = (()=>{ const b = new Uint8Array(devBuf), n = devMeta.n;
   const idx = new Uint32Array(n), F = new Uint8Array(n), Q = new Uint8Array(n*4);
