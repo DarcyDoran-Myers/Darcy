@@ -18,9 +18,9 @@ lakes/rivers ≥ ~1,000 acres from Esri USA Detailed Water Bodies (`tools/landcl
 
 ## Social video
 
-`video/florida-lands-conserved-vertical.mp4` (1080×1920, 9:16) and `video/florida-lands-conserved-square.mp4`
-(1080×1080), 31 s at 30 fps, 1900–2026 with a 5 s hold on the final map. Rendered from `video/render.html` frame by frame with Playwright + ffmpeg
-(`tools/video.js <vertical|square> out.mp4`).
+`video/florida-lands-conserved-vertical.mp4` (1080×1920, 9:16), 31 s at 30 fps, 1900–2026 with a 5 s hold on
+the final map. Rendered from `video/render.html` frame by frame with Playwright + ffmpeg
+(`tools/video.js vertical out.mp4`).
 
 ## Developed land
 

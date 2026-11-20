@@ -75,7 +75,7 @@ async function load(){
 }
 function layout(fmt){
   if (fmt === 'vertical'){ W=1080; H=1920;
-    return { map:[40,330,1000,1240], title:[64,120], stats:[64,1010], year:[64,980], chart:[64,1610,952,190], src:[64,1868], ann:[64,375], shift:[64,375] };
+    return { map:[40,450,1000,1010], title:[64,120], stats:[64,1010], year:[64,980], chart:[64,1500,952,300], src:[64,1876], ann:[64,375], shift:[64,375] };
   }
   W=1080; H=1080;
   return { map:[300,80,760,880], title:[56,92], stats:[56,520], year:[56,490], chart:[56,940,968,92], src:[56,1056], ann:[56,180], shift:[56,812] };
@@ -162,18 +162,24 @@ window.renderFrame = function(i){
   const ann = y => { const r = {}; for (const k of OWN) r[k] = cum[y-MINY][k] - (y > MINY ? cum[y-MINY-1][k] : 0); return r; };
   const barW = Math.max(1, X(MINY+1) - X(MINY) - (V ? 1.6 : 1.2));
   ctx.strokeStyle=C.rule; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(cx,cy+ch+.5); ctx.lineTo(cx+cw,cy+ch+.5); ctx.stroke();
-  const rowX = [-999,-999,-999];
   for (let y=MINY+1; y<=Math.min(yr, MAXY); y++){
     const r = ann(y); let base = 0;
     for (const k of OWN){ const v0 = r[k]; if (v0 <= 0) continue;
       const y0 = Math.min(base, CAP), y1 = Math.min(base+v0, CAP); base += v0;
       if (y1 > y0){ ctx.fillStyle = C[k]; ctx.fillRect(X(y), Y(y1), barW, Math.max(1, Y(y0)-Y(y1))); } }
-    if (base > CAP){ const lx = X(y)+barW/2, gapNeed = V?52:40; let row = rowX.findIndex(x0 => lx - x0 >= gapNeed); if (row < 0) row = 2;
-      text(Math.round(base/1000)+'k', lx, cy-6-row*(V?22:16), `600 ${V?18:13}px ${FB}`, C.ink2, 'center'); rowX[row] = lx; }
   }
   ctx.globalAlpha=holdFade; ctx.fillStyle=C.hi; ctx.fillRect(X(yf+1)-1.5, cy-4, 3, ch+4); ctx.globalAlpha=1;
   if (V) [1900,1950,2000].forEach(y=>text(String(y), X(y+.5), cy+ch+32, `400 22px ${FB}`, C.muted, 'center'));
-  text('New conservation acres each year', cx, cy-(V?70:60), `600 ${V?28:20}px ${FD}`, C.ink2);
+  // arrow marking 2000 (fades in once the bars reach it)
+  if (yf >= 2000){
+    const top = cy - 4, x2 = X(2000)+barW/2, s2 = V?1:0.8;
+    ctx.globalAlpha = Math.min(1, (yf-2000)/1.5) * .5; ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.setLineDash([4,5]); ctx.beginPath(); ctx.moveTo(x2, top); ctx.lineTo(x2, cy+ch); ctx.stroke(); ctx.setLineDash([]);
+    ctx.globalAlpha = Math.min(1, (yf-2000)/1.5);
+    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(x2, top-6*s2); ctx.lineTo(x2-10*s2, top-22*s2); ctx.lineTo(x2+10*s2, top-22*s2); ctx.closePath(); ctx.fill();
+    text('2000', x2, top-30*s2, `600 ${V?28:18}px ${FD}`, C.ink, 'center');
+    ctx.globalAlpha = 1;
+  }
+  text('New conservation acres each year', cx, cy-(V?24:60), `600 ${V?28:20}px ${FD}`, C.ink2);
 
   // ---- the shift: buying land -> buying easements ----
   if (yf >= 2008){
