@@ -74,7 +74,12 @@ lk = lk.explode(index_parts=False); lk = lk[lk.area > 4e6]
 lk.to_file(W + 'web_lakes.geojson', driver='GeoJSON')
 
 esm = o[(o.cls == 'esmt') & ~o.mil].groupby('year').acres.sum()
-json.dump({'names': names, 'cls': CLS, 'own': OWN, 'easement': {int(y): round(float(v)) for y, v in esm.items()}, 'q': Q, 'stats': stats, 'levels': lv,
+o['g3'] = np.where(o.cls == 'esmt', 'esmt', np.where(o.own == 'public', 'public', 'other'))
+st3 = o.groupby(['year', 'g3', 'mil']).acres.sum()
+stats3 = {}
+for (y, g, m), v in st3.items():
+    stats3.setdefault(int(y), {})[g + ('_m' if m else '')] = round(float(v))
+json.dump({'names': names, 'cls': CLS, 'own': OWN, 'stats3': stats3, 'easement': {int(y): round(float(v)) for y, v in esm.items()}, 'q': Q, 'stats': stats, 'levels': lv,
            'qacres': {k: round(float(v)) for k, v in o.groupby('q').acres.sum().items()}},
           open(OUT + 'meta.json', 'w'), separators=(',', ':'))
 print('features', len(d))

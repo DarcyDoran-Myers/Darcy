@@ -15,12 +15,12 @@ canvas{display:block}
 /* Frame-by-frame renderer for the social video. Call window.setup(format) then window.renderFrame(i). */
 const C = {
   bg:'#0d1211', land:'#1b2421', county:'#28332f', coast:'#33403b', water:'#0d1211',
-  public:'#2e9a66', private:'#9470c9', nonprofit:'#5a86d0', tribal:'#c4618a', dev:'#ff6a24', esmt:'#e6c21f', esmt2:'#8f7400', hi:'#ffffff',
+  public:'#2e9a66', other:'#5a86d0', dev:'#ff6a24', esmt:'#a8cc2a', esmt2:'#55690f', hi:'#ffffff',
   ink:'#eef2ee', ink2:'#b4bfb8', muted:'#7f8b84', rule:'#26302d'
 };
 const FD = '"Barlow Semi Condensed", "Arial Narrow", sans-serif', FB = '"Public Sans", system-ui, sans-serif';
 const FPS = 30, MINY = 1900, MAXY = 2026, LAND = 34.6e6;
-const OWN = ['public','private','nonprofit','tribal'], OWN_NAMES = ['Public','Private','Nonprofit','Tribal'];
+const OWN = ['public','esmt','other'], OWN_NAMES = {public:'Public', esmt:'Private conservation easement', other:'Other conservation lands'};
 const ANN = [[1908,'Ocala National Forest'],[1947,'Everglades National Park'],[1972,'Environmentally Endangered Lands program'],
              [1981,'Save Our Rivers'],[1990,'Preservation 2000'],[2001,'Florida Forever']];
 // timeline: seconds -> year
@@ -60,7 +60,7 @@ async function load(){
   featByYear = new Map();
   for (const f of topojson.feature(topo, topo.objects.lands).features){
     const p = f.properties; if (p.y === 0) continue;
-    const grp = OWN[p.o];
+    const grp = p.e ? 'esmt' : p.o === 0 ? 'public' : 'other';
     const k = p.y+'|'+grp+'|'+p.e;
     if (!g.has(k)) g.set(k, {y:p.y, g:grp, e:p.e, path:new Path2D()});
     ring(f.geometry, g.get(k).path);
@@ -68,8 +68,8 @@ async function load(){
     const fy = featByYear.get(p.y); fy.set(p.n, (fy.get(p.n)||0) + p.a);
   }
   groups = [...g.values()].sort((a,b)=>a.y-b.y);
-  cum = []; const acc={public:0,private:0,nonprofit:0,tribal:0};
-  for (let y=1845;y<=MAXY;y++){ const s=meta.stats[y]||{};
+  cum = []; const acc={public:0,esmt:0,other:0};
+  for (let y=1845;y<=MAXY;y++){ const s=meta.stats3[y]||{};
     for (const k of OWN) acc[k] += (s[k]||0)+(s[k+'_m']||0);
     if (y >= MINY) cum.push({...acc}); }
 }
@@ -86,9 +86,6 @@ window.setup = async function(fmt){
   await Promise.all(['600 20px "Barlow Semi Condensed"','700 20px "Barlow Semi Condensed"','400 20px "Public Sans"','600 20px "Public Sans"'].map(f=>document.fonts.load(f)));
   LAY = layout(fmt); cv = document.getElementById('c'); cv.width=W; cv.height=H; ctx = cv.getContext('2d');
   hatch = {};
-  for (const g of OWN){ const hc = document.createElement('canvas'); hc.width=hc.height=9; const h=hc.getContext('2d');
-    h.strokeStyle=C[g]; h.lineWidth=3; h.beginPath(); for(let i=-9;i<=18;i+=9){h.moveTo(i,9);h.lineTo(i+9,0);} h.stroke();
-    hatch[g] = ctx.createPattern(hc,'repeat'); }
   const hk = document.createElement('canvas'); hk.width=hk.height=9; const h2=hk.getContext('2d');
   h2.fillStyle=C.esmt; h2.fillRect(0,0,9,9); h2.strokeStyle=C.esmt2; h2.lineWidth=2; h2.beginPath(); for(let i=-9;i<=18;i+=9){h2.moveTo(i,9);h2.lineTo(i+9,0);} h2.stroke();
   hatch.key = ctx.createPattern(hk,'repeat');
@@ -147,18 +144,16 @@ window.renderFrame = function(i){
   const sw = V?30:22, gap = V?74:52;
   OWN.forEach((g,j)=>{
     const y0 = sy + (V?58:44) + j*gap;
-    ctx.fillStyle=C[g]; ctx.fillRect(sx,y0,sw,sw);
-    text(OWN_NAMES[g==='public'?0:g==='private'?1:g==='nonprofit'?2:3], sx+sw+(V?16:12), y0+sw*.38, `400 ${V?24:18}px ${FB}`, C.ink2, 'left','middle');
+    if (g === 'esmt'){ const hp = hatch.key; hp.setTransform(new DOMMatrix()); ctx.fillStyle=hp; ctx.fillRect(sx,y0,sw,sw);
+      ctx.strokeStyle=C.esmt2; ctx.lineWidth=1.5; ctx.strokeRect(sx+.75,y0+.75,sw-1.5,sw-1.5); }
+    else { ctx.fillStyle=C[g]; ctx.fillRect(sx,y0,sw,sw); }
+    text(OWN_NAMES[g], sx+sw+(V?16:12), y0+sw*.38, `400 ${V?24:18}px ${FB}`, C.ink2, 'left','middle');
     text(fmtAc(row[g])+' acres', sx+sw+(V?16:12), y0+sw*1.45, `600 ${V?36:27}px ${FD}`, C.ink, 'left','middle');
   });
-  { const y0 = sy + (V?58:44) + 4*gap + (V?10:6);
+  { const y0 = sy + (V?58:44) + 3*gap + (V?10:6);
     ctx.fillStyle=C.dev; ctx.fillRect(sx,y0,sw,sw);
     text(yr > devMeta.last ? `Developed (through ${devMeta.last})` : 'Developed', sx+sw+(V?16:12), y0+sw*.38, `400 ${V?24:18}px ${FB}`, C.ink2, 'left','middle');
     text(fmtAc(devAcres(yf))+' acres', sx+sw+(V?16:12), y0+sw*1.45, `600 ${V?36:27}px ${FD}`, C.ink, 'left','middle'); }
-  { const y0 = sy + (V?58:44) + 5*gap + (V?16:10);
-    const hp = hatch.key; hp.setTransform(new DOMMatrix()); ctx.fillStyle=hp; ctx.fillRect(sx,y0,sw,sw);
-    ctx.strokeStyle=C.esmt2; ctx.lineWidth=1.5; ctx.strokeRect(sx+.75,y0+.75,sw-1.5,sw-1.5);
-    text('Conservation easements (any owner)', sx+sw+(V?16:12), y0+sw/2, `400 ${V?24:18}px ${FB}`, C.ink2, 'left','middle'); }
 
   // ---- program callouts ----
   const [ax,ay] = LAY.ann;

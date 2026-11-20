@@ -7,7 +7,7 @@
 :root{
   --bg:#f3f5f1; --panel:#fbfcfa; --ink:#18221d; --ink2:#46534c; --muted:#6c7871; --rule:#d9dfd8;
   --water:#e3ebeb; --land:#fdfdf9; --county:#d4dad2; --coast:#9aa7a0;
-  --public:#2f7d4f; --private:#6a3d9a; --nonprofit:#3a6fc0; --tribal:#b04a72; --unk:#9aa29d; --dev:#f05a14; --esmt:#e3bd00; --esmt2:#9c8200;
+  --public:#2f7d4f; --other:#3a6fc0; --unk:#9aa29d; --dev:#f05a14; --esmt:#9bbd0a; --esmt2:#5f7400;
   --hi:#18221d; --accent:#2f7d4f;
   --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -15,11 +15,11 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
   --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
-  --public:#2e9a66; --private:#9470c9; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --dev:#ff6a24; --esmt:#e6c21f; --esmt2:#8f7400; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}}
+  --public:#2e9a66; --other:#5a86d0; --unk:#6a736e; --dev:#ff6a24; --esmt:#a8cc2a; --esmt2:#55690f; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
   --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
-  --public:#2e9a66; --private:#9470c9; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --dev:#ff6a24; --esmt:#e6c21f; --esmt2:#8f7400; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}
+  --public:#2e9a66; --other:#5a86d0; --unk:#6a736e; --dev:#ff6a24; --esmt:#a8cc2a; --esmt2:#55690f; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
@@ -62,7 +62,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
 .row .nm small{display:block;color:var(--muted);font-weight:400;font-size:12px}
 .row .v{font-family:var(--f-display);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums;text-align:right}
 .sw{width:18px;height:18px;border-radius:3px;display:block}
-.sw.public{background:var(--public)} .sw.private{background:var(--private)} .sw.nonprofit{background:var(--nonprofit)} .sw.tribal{background:var(--tribal)}
+.sw.public{background:var(--public)} .sw.other{background:var(--other)}
 .sw.dev{background:var(--dev)}
 .devrow{border-top:1px solid var(--rule);padding-top:12px}
 .devrow .nm small{display:block;color:var(--muted);font-weight:400;font-size:12px}
@@ -138,10 +138,8 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
 
       <div class="tot" id="tot">
         <div class="row"><label><input type="checkbox" id="t-public" checked><span class="sw public"></span><span class="nm">Public<small>Federal, state, water district &amp; local government</small></span></label><span class="v" id="v-public">0</span></div>
-        <div class="row"><label><input type="checkbox" id="t-private" checked><span class="sw private"></span><span class="nm">Private<small>Individuals &amp; companies, mostly under easement</small></span></label><span class="v" id="v-private">0</span></div>
-        <div class="row"><label><input type="checkbox" id="t-nonprofit" checked><span class="sw nonprofit"></span><span class="nm">Nonprofit<small>Land trusts, Audubon, The Nature Conservancy</small></span></label><span class="v" id="v-nonprofit">0</span></div>
-        <div class="row"><label><input type="checkbox" id="t-tribal" checked><span class="sw tribal"></span><span class="nm">Tribal<small>Miccosukee Tribe</small></span></label><span class="v" id="v-tribal">0</span></div>
-        <div class="ekey"><span class="sw hatch"></span><span>Conservation easements (any owner)</span><b id="v-esmt">0</b></div>
+        <div class="row"><label><input type="checkbox" id="t-esmt" checked><span class="sw hatch"></span><span class="nm">Private conservation easement<small>Development rights retired; land stays in its owner's hands</small></span></label><span class="v" id="v-esmt">0</span></div>
+        <div class="row"><label><input type="checkbox" id="t-other" checked><span class="sw other"></span><span class="nm">Other conservation lands<small>Nonprofit, tribal &amp; private preserves</small></span></label><span class="v" id="v-other">0</span></div>
       </div>
 
       <div class="row devrow"><label><input type="checkbox" id="t-dev" checked><span class="sw dev"></span><span class="nm">Developed land<small id="devsub">Roofs, roads &amp; pavement covering 20%+ of the ground</small></span></label><span class="v" id="v-dev">0</span></div>
@@ -149,7 +147,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
       <div class="share">
         <div class="eyebrow">Share of Florida's land area</div>
         <div class="big" id="share">0%</div>
-        <div class="bar" id="sharebar"><span style="background:var(--public)"></span><span style="background:var(--private)"></span><span style="background:var(--nonprofit)"></span><span style="background:var(--tribal)"></span></div>
+        <div class="bar" id="sharebar"><span style="background:var(--public)"></span><span style="background:var(--esmt)"></span><span style="background:var(--other)"></span></div>
         <div style="font-size:12px;color:var(--muted);margin-top:6px"><span id="acrestot">0</span> acres of 34.6 million, land only. <span id="unkline"></span></div>
       </div>
 
@@ -175,7 +173,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
   <div class="notes">
     <div>
       <h3>What's counted</h3>
-      <p>The footprint is the Florida Natural Areas Inventory's <a href="https://www.fnai.org/species-communities/conservation-lands" target="_blank" rel="noopener">Florida Conservation Lands</a> layer, the state's standard list of managed conservation areas. Each area is grouped by who holds title: public agencies, private individuals and companies, nonprofits, or a tribe. Private conservation land is almost entirely under conservation easements, where an agency or land trust holds the development rights; easement land in any ownership group is drawn yellow, and the ownership totals still include it. Only one tribal area, the Miccosukee Tribe's 46,000-acre conservation area in the Everglades, is in the inventory; the Seminole Tribe's reservations are not.</p>
+      <p>The footprint is the Florida Natural Areas Inventory's <a href="https://www.fnai.org/species-communities/conservation-lands" target="_blank" rel="noopener">Florida Conservation Lands</a> layer, the state's standard list of managed conservation areas. Public means fee title held by a federal, state, water management district or local agency. Private conservation easements are land where an agency or land trust holds the development rights while the owner keeps the land; nearly all of it is privately owned, and every easement is counted here whoever holds title. Other conservation lands are nonprofit, tribal and private preserves owned outright. The one tribal area in the inventory, the Miccosukee Tribe's 46,000-acre conservation area in the Everglades, is held under an easement and is counted with easements.</p>
       <p>Open water is removed: the Gulf, the Atlantic, Florida Bay and other estuaries outside FDEP’s 1:12,000 shoreline, plus Lake Okeechobee and every lake or river wider than about 1,000 acres. That takes out about 2.1 million acres, mostly in Everglades, Biscayne and the Keys refuges. Marshes and swamps stay in. Florida's land area of 34.6 million acres is the denominator.</p>
     </div>
     <div>
@@ -203,7 +201,7 @@ const $ = id => document.getElementById(id);
 const fmt = d3.format(',');
 const fmtM = v => v >= 1e6 ? (v/1e6).toFixed(2)+'M' : v >= 1e4 ? Math.round(v/1e3)+'k' : fmt(Math.round(v));
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const OWN = ['public','private','nonprofit','tribal'], GROUPS = OWN;
+const OWN = ['public','private','nonprofit','tribal'], GROUPS = ['public','esmt','other'];
 const OWN_NAMES = ['Public','Private','Nonprofit','Tribal'];
 const LEVEL_NAMES = ['Federal','State','Water management district','Local government','',''];
 const Q_NAMES = ['Parcel deed or closing date','Managed-area establishment year (estimated)','Earliest dated parcel in the same area (estimated)','No recorded date'];
@@ -259,7 +257,7 @@ lands.forEach(f=>ringsToPath(f.geometry, new Path2D(), bounds));
 const feats = lands.map(f=>{
   const p = new Path2D(), bb=[Infinity,Infinity,-Infinity,-Infinity];
   ringsToPath(f.geometry, p, bb);
-  const o = f.properties; return {...o, g: OWN[o.o], path:p, bb};
+  const o = f.properties; return {...o, g: o.e ? 'esmt' : o.o === 0 ? 'public' : 'other', path:p, bb};
 });
 // group paths: key = year|class|mil
 const groups = new Map();
@@ -271,7 +269,7 @@ for (const f of feats){
 const groupList = [...groups.values()].sort((a,b)=>a.y-b.y);
 
 // ---------- state ----------
-const S = { year: 2026, playing:false, speed:1, dev:true, show:{public:true,private:true,nonprofit:true,tribal:true}, mil:true, lvl:false, unk:false, sel:null };
+const S = { year: 2026, playing:false, speed:1, dev:true, show:{public:true,esmt:true,other:true}, mil:true, lvl:false, unk:false, sel:null };
 const minY = 1900, maxY = 2026;
 
 // ---------- canvas map ----------
@@ -302,7 +300,7 @@ function hatch(color, k){
 let colors = {};
 function readColors(){
   devYearDrawn = -1;
-  colors = {public:css('--public'),private:css('--private'),nonprofit:css('--nonprofit'),tribal:css('--tribal'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water'),dev:css('--dev'),esmt:css('--esmt'),esmt2:css('--esmt2')};
+  colors = {public:css('--public'),other:css('--other'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water'),dev:css('--dev'),esmt:css('--esmt'),esmt2:css('--esmt2')};
   colors.lvl = [shade(colors.public,-.28), colors.public, shade(colors.public,.32), shade(colors.public,.55)];
   hatchCache = {};
 }
@@ -407,11 +405,10 @@ function positionCard(){
 const years = d3.range(minY, maxY+1);
 const keyFor = (g, m) => g + (m ? '_m' : '');
 function cumulative(){
-  const acc = {public:0,private:0,nonprofit:0,tribal:0,esmt:0}; const out = [];
+  const acc = {public:0,esmt:0,other:0}; const out = [];
   for (let y = 1845; y <= maxY; y++){
-    const s = meta.stats[y] || {};
+    const s = meta.stats3[y] || {};
     for (const g of GROUPS) acc[g] += (s[g]||0) + (S.mil ? (s[g+'_m']||0) : 0);
-    acc.esmt += meta.easement[y] || 0;
     if (y >= minY) out.push({year:y, ...acc});
   }
   return out;
@@ -430,7 +427,6 @@ function updatePanel(){
   const row = cum[S.year - minY];
   const vis = g => S.show[g] ? row[g] : 0;
   for (const g of GROUPS) $('v-'+g).textContent = fmtM(row[g]);
-  $('v-esmt').textContent = fmtM(row.esmt);
   const tot = GROUPS.reduce((t,g)=>t+vis(g),0);
   $('share').textContent = (tot/LAND_AREA*100).toFixed(tot/LAND_AREA < .01 ? 2 : 1) + '%';
   $('acrestot').textContent = fmt(Math.round(tot));
@@ -439,7 +435,7 @@ function updatePanel(){
   $('stamp').textContent = S.year;
   $('v-dev').textContent = fmtM(devAcres(S.year));
   $('devsub').textContent = S.year > devMeta.last ? `Through ${devMeta.last}, the latest satellite survey` : 'Roofs, roads & pavement covering 20%+ of the ground';
-  const u = meta.stats[0] || {}, ua = GROUPS.reduce((s,g)=>s + (S.show[g] ? (u[g]||0) + (S.mil ? (u[g+'_m']||0) : 0) : 0), 0);
+  const u = meta.stats3[0] || {}, ua = GROUPS.reduce((s,g)=>s + (S.show[g] ? (u[g]||0) + (S.mil ? (u[g+'_m']||0) : 0) : 0), 0);
   $('unkline').textContent = ua ? `Another ${fmtM(ua)} acres have no recorded date and are not counted here.` : '';
   $('newh').textContent = 'Largest additions in ' + S.year;
   const m = addByYear.get(S.year), list = $('newlist'); list.innerHTML = '';
@@ -448,7 +444,7 @@ function updatePanel(){
   if (!items.length){ list.innerHTML = '<li class="none" style="display:block">No recorded acquisitions this year.</li>'; return; }
   for (const d of items){
     const li = document.createElement('li');
-    li.innerHTML = `<i style="background:var(--${d.e ? 'esmt' : d.g})"></i><span></span><span>${fmtM(d.a)} ac</span>`;
+    li.innerHTML = `<i style="background:var(--${d.g})"></i><span></span><span>${fmtM(d.a)} ac</span>`;
     li.children[1].textContent = meta.names[d.n]; list.appendChild(li);
   }
 }
@@ -517,7 +513,7 @@ svg.on('pointerdown', e=>{ scrubbing = true; svg.node().setPointerCapture(e.poin
    .on('pointermove', e=>{
      const y = yearAt(e.clientX); if (scrubbing) setYear(y);
      const row = cum[y-minY], r = svg.node().getBoundingClientRect(), pr = svg.node().parentNode.getBoundingClientRect();
-     const lines = [['public','Public'],['private','Private'],['nonprofit','Nonprofit'],['tribal','Tribal']].filter(([g])=>S.show[g])
+     const lines = [['public','Public'],['esmt','Private easement'],['other','Other']].filter(([g])=>S.show[g])
        .map(([g,l])=>`<div><i style="background:var(--${g})"></i>${l}<span style="margin-left:auto;padding-left:12px">${fmt(Math.round(row[g]))} ac</span></div>`).join('')
        + (S.dev ? `<div><i style="background:var(--dev)"></i>Developed${y>devMeta.last?` (${devMeta.last})`:''}<span style="margin-left:auto;padding-left:12px">${fmt(devAcres(y))} ac</span></div>` : '');
      tip.innerHTML = `<b>${y}</b>${lines}`; tip.hidden = false;
