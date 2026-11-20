@@ -90,6 +90,19 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
 .chartbox .hd{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 16px;align-items:baseline}
 .chartbox h2,.new h4{font:600 16px/1.2 var(--f-display);margin:0}
 #chart{display:block;width:100%;height:220px;cursor:ew-resize;touch-action:pan-y}
+#bars{display:block;width:100%;height:200px;cursor:ew-resize;touch-action:pan-y}
+#bars text{fill:var(--muted);font:11px var(--f-body)}
+#bars .grid line{stroke:var(--rule)}
+#bars .clip text{fill:var(--ink2);font-size:10px;font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink2);margin-top:4px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.callout{position:absolute;left:16px;top:42%;max-width:min(300px,44%);background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;font-size:13px;line-height:1.4;box-shadow:0 3px 14px rgba(0,0,0,.12);transition:opacity .4s}
+.callout b{font-family:var(--f-display);font-size:15px;font-weight:600;color:var(--ink);display:block;margin-bottom:4px}
+.callout p{margin:0 0 4px;color:var(--ink2)} .callout p:last-child{margin:0}
+.callout em{font-style:normal;font-weight:600;color:var(--ink)}
+.callout i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:0}
+@media (max-width:700px){.callout{display:none}}
 #chart text{fill:var(--muted);font:11px var(--f-body)}
 #chart .grid line{stroke:var(--rule)}
 #chart .ann line{stroke:var(--muted);stroke-dasharray:2 3}
@@ -121,6 +134,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
       <div id="loading">Loading parcels…</div>
       <div class="yearstamp" aria-hidden="true"><small>Acquired through</small><span id="stamp">1900</span></div>
       <div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">−</button><button id="zreset" aria-label="Reset view">⟲</button></div>
+      <div class="callout" id="callout" hidden></div>
       <div class="hint" id="hint">Drag to pan · scroll or pinch to zoom · click a parcel</div>
     </div>
 
@@ -168,6 +182,13 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
     <div class="hd"><h2>Cumulative acres conserved and developed</h2><span class="eyebrow">Click or drag to set the year</span></div>
     <svg id="chart" role="img" aria-label="Stacked area chart of cumulative conserved acres by year, with a line for developed acres"></svg>
     <div class="tip" id="tip" hidden></div>
+  </div>
+
+  <div class="chartbox">
+    <div class="hd"><h2>New acres conserved each year</h2><span class="eyebrow" id="barsub">Public purchases gave way to easements after 2000</span></div>
+    <div class="legend"><span><i style="background:var(--public)"></i>Public</span><span><i style="background:var(--esmt)"></i>Private conservation easement</span><span><i style="background:var(--other)"></i>Other conservation lands</span></div>
+    <svg id="bars" role="img" aria-label="Bar chart of conservation acres added each year by type"></svg>
+    <div class="tip" id="btip" hidden></div>
   </div>
 
   <div class="notes">
@@ -490,8 +511,10 @@ function drawChart(){
   svg.append('line').attr('id','cur').attr('y1',M.t-2).attr('y2',M.t+chh).attr('stroke','var(--hi)').attr('stroke-width',2);
   svg.append('circle').attr('id','curdot').attr('r',4).attr('fill','var(--hi)').attr('stroke','var(--panel)').attr('stroke-width',2);
   moveCursor();
+  drawBars();
 }
 function moveCursor(){
+  moveBars();
   if (!cx) return;
   const x = cx(S.year), keys = GROUPS.filter(g=>S.show[g]);
   const row = cum[S.year-minY], top = keys.reduce((s,k)=>s+row[k],0);
@@ -503,6 +526,87 @@ function yearAt(clientX){
   const r = svg.node().getBoundingClientRect();
   return Math.max(minY, Math.min(maxY, Math.round(cx.invert(clientX - r.left))));
 }
+// ---------- yearly additions ----------
+const bsvg = d3.select('#bars'), btip = $('btip');
+const CAP = 300000;
+function annual(y){
+  const s = meta.stats3[y] || {}, r = {year:y};
+  for (const g of GROUPS) r[g] = (s[g]||0) + (S.mil ? (s[g+'_m']||0) : 0);
+  if (y === minY){ const c = cum[0]; for (const g of GROUPS) r[g] = c[g]; r.pre = true; }
+  return r;
+}
+let bx, by, bM = {l:44,r:10,t:30,b:22}, bh;
+function decade(a, b){
+  const t = {public:0,esmt:0,other:0};
+  for (let y=a; y<=b; y++){ const s = meta.stats3[y] || {}; for (const g of GROUPS) t[g] += (s[g]||0) + (S.mil ? (s[g+'_m']||0) : 0); }
+  return t;
+}
+function drawBars(){
+  const el = bsvg.node(), w = el.clientWidth, h = el.clientHeight;
+  bsvg.attr('viewBox',`0 0 ${w} ${h}`); bsvg.selectAll('*').remove();
+  const cw2 = w - bM.l - bM.r; bh = h - bM.t - bM.b;
+  bx = d3.scaleLinear().domain([minY, maxY+1]).range([bM.l, bM.l+cw2]);
+  by = d3.scaleLinear().domain([0, CAP]).range([bM.t+bh, bM.t]);
+  const g = bsvg.append('g').attr('class','grid');
+  [0,100000,200000,300000].forEach(t=>{ g.append('line').attr('x1',bM.l).attr('x2',bM.l+cw2).attr('y1',by(t)).attr('y2',by(t));
+    bsvg.append('text').attr('x',bM.l-6).attr('y',by(t)+4).attr('text-anchor','end').text(t===0?'0':(t/1000)+'k'); });
+  const xt = w < 520 ? [1900,1950,2000] : [1900,1920,1940,1960,1980,2000,2020];
+  xt.forEach(t=>bsvg.append('text').attr('x',bx(t+.5)).attr('y',h-6).attr('text-anchor','middle').text(t));
+  const keys = GROUPS.filter(k=>S.show[k]);
+  const bw = Math.max(1, (bx(minY+1)-bx(minY)) - (w > 700 ? 1.5 : .5));
+  const clip = bsvg.append('g').attr('class','clip'); const rowX = [-999,-999];
+  for (let y=minY+1; y<=maxY; y++){
+    const r = annual(y); let base = 0;
+    for (const k of keys){
+      const v = r[k]; if (!v) continue;
+      const y0 = Math.min(base, CAP), y1 = Math.min(base+v, CAP); base += v;
+      if (y1 <= y0) continue;
+      bsvg.append('rect').attr('x',bx(y)).attr('width',bw).attr('y',by(y1)).attr('height',Math.max(.5,by(y0)-by(y1))).attr('fill',`var(--${k})`);
+    }
+    if (base > CAP){ const lx = bx(y)+bw/2; let row = rowX.findIndex(x0 => lx - x0 >= 30); if (row < 0) row = 1;
+      clip.append('text').attr('x',lx).attr('y',bM.t-4-row*12).attr('text-anchor','middle').text(Math.round(base/1000)+'k');
+      rowX[row] = lx; }
+  }
+  bsvg.append('rect').attr('id','bshade').attr('y',bM.t).attr('height',bh).attr('fill','var(--panel)').attr('opacity',.6);
+  bsvg.append('line').attr('id','bcur').attr('y1',bM.t-2).attr('y2',bM.t+bh).attr('stroke','var(--ink)').attr('stroke-width',1.5);
+  const d90 = decade(1990,1999), d10 = decade(2010,2019);
+  const share = d => d.esmt/(d.public+d.esmt+d.other)*100;
+  $('barsub').textContent = `Easements were ${Math.round(share(d90))}% of new acres in the 1990s and ${Math.round(share(d10))}% in the 2010s`;
+  moveBars();
+}
+function moveBars(){
+  if (!bx) return;
+  const x = bx(S.year+1);
+  bsvg.select('#bcur').attr('x1',x).attr('x2',x);
+  bsvg.select('#bshade').attr('x',x).attr('width',Math.max(0,bx(maxY+1)-x));
+}
+function bYearAt(clientX){ const r = bsvg.node().getBoundingClientRect(); return Math.max(minY, Math.min(maxY, Math.floor(bx.invert(clientX - r.left)))); }
+let bscrub = false;
+bsvg.on('pointerdown', e=>{ bscrub = true; bsvg.node().setPointerCapture(e.pointerId); stop(); setYear(bYearAt(e.clientX)); })
+   .on('pointerup pointercancel', ()=>bscrub=false)
+   .on('pointermove', e=>{
+     const y = bYearAt(e.clientX); if (bscrub) setYear(y);
+     const r = annual(y), pr = bsvg.node().parentNode.getBoundingClientRect(), rr = bsvg.node().getBoundingClientRect();
+     const lines = [['public','Public'],['esmt','Private easement'],['other','Other']].filter(([g])=>S.show[g])
+       .map(([g,l])=>`<div><i style="background:var(--${g})"></i>${l}<span style="margin-left:auto;padding-left:12px">${fmt(Math.round(r[g]))} ac</span></div>`).join('');
+     btip.innerHTML = `<b>${y}${r.pre?' and earlier':''}</b>${lines}`; btip.hidden = false;
+     const x = e.clientX - pr.left, tw = btip.offsetWidth;
+     btip.style.left = (x + 14 + tw > pr.width ? x - tw - 14 : x + 14) + 'px'; btip.style.top = (rr.top - pr.top + 10) + 'px';
+   })
+   .on('pointerleave', ()=>{ btip.hidden = true; bscrub=false; });
+
+// ---------- callout on the map ----------
+function updateCallout(){
+  const c = $('callout');
+  if (S.year < 2008){ c.hidden = true; return; }
+  const d90 = decade(1990,1999), d10 = decade(2010,2019);
+  const t90 = d90.public+d90.esmt+d90.other, t10 = d10.public+d10.esmt+d10.other;
+  c.innerHTML = `<b>From buying land to buying easements</b>
+    <p><em>1990s:</em> <i style="background:var(--public)"></i>${(d90.public/1e6).toFixed(1)} million acres bought outright for public ownership; easements were ${Math.round(d90.esmt/t90*100)}% of new acres.</p>
+    <p><em>2010s:</em> <i style="background:var(--esmt)"></i>${Math.round(d10.esmt/t10*100)}% of new conservation land was private easements.</p>`;
+  c.hidden = false;
+}
+
 let scrubbing = false;
 svg.on('pointerdown', e=>{ scrubbing = true; svg.node().setPointerCapture(e.pointerId); stop(); setYear(yearAt(e.clientX)); })
    .on('pointerup pointercancel', ()=>scrubbing=false)
@@ -521,7 +625,7 @@ svg.on('pointerdown', e=>{ scrubbing = true; svg.node().setPointerCapture(e.poin
 // ---------- year control & playback ----------
 const slider = $('yr');
 function setYear(y){
-  S.year = y; slider.value = y; updatePanel(); moveCursor(); draw();
+  S.year = y; slider.value = y; updatePanel(); moveCursor(); updateCallout(); draw();
   if (card && card._f && card._f.y > y){ S.sel=null; card.remove(); card=null; draw(); }
 }
 slider.addEventListener('input', ()=>{ stop(); setYear(+slider.value); });
@@ -556,7 +660,7 @@ for (const g of GROUPS){
   $('t-'+g).addEventListener('change', e=>{ S.show[g] = e.target.checked;
     e.target.closest('.row').classList.toggle('off', !e.target.checked); updatePanel(); drawChart(); draw(); });
 }
-$('o-mil').addEventListener('change', e=>{ S.mil = e.target.checked; cum = cumulative(); updatePanel(); drawChart(); draw(); });
+$('o-mil').addEventListener('change', e=>{ S.mil = e.target.checked; cum = cumulative(); updatePanel(); drawChart(); updateCallout(); draw(); });
 $('o-govlvl').addEventListener('change', e=>{ S.lvl = e.target.checked; draw(); });
 $('o-unk').addEventListener('change', e=>{ S.unk = e.target.checked; draw(); });
 $('t-dev').addEventListener('change', e=>{ S.dev = e.target.checked; e.target.closest('.row').classList.toggle('off', !e.target.checked); drawChart(); draw(); });
@@ -569,6 +673,6 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=
 new MutationObserver(()=>{ readColors(); draw(); }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
 new ResizeObserver(()=>{ resize(); drawChart(); }).observe(box);
 window.addEventListener('resize', drawChart);
-resize(); updatePanel(); drawChart();
+resize(); updatePanel(); drawChart(); updateCallout();
 })();
 </script>

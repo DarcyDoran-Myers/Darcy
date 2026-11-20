@@ -75,10 +75,10 @@ async function load(){
 }
 function layout(fmt){
   if (fmt === 'vertical'){ W=1080; H=1920;
-    return { map:[40,330,1000,1240], title:[64,120], stats:[64,1010], year:[64,980], chart:[64,1610,952,190], src:[64,1868], ann:[64,375] };
+    return { map:[40,330,1000,1240], title:[64,120], stats:[64,1010], year:[64,980], chart:[64,1610,952,190], src:[64,1868], ann:[64,375], shift:[64,375] };
   }
   W=1080; H=1080;
-  return { map:[300,80,760,880], title:[56,92], stats:[56,520], year:[56,490], chart:[56,940,968,92], src:[56,1056], ann:[56,180] };
+  return { map:[300,80,760,880], title:[56,92], stats:[56,520], year:[56,490], chart:[56,940,968,92], src:[56,1056], ann:[56,180], shift:[56,812] };
 }
 let LAY, FMT;
 window.setup = async function(fmt){
@@ -156,29 +156,36 @@ window.renderFrame = function(i){
     ctx.globalAlpha = 1;
   }
 
-  // ---- cumulative strip chart ----
-  const [cx,cy,cw,ch] = LAY.chart, ymax = 11e6;
-  const X = y => cx + (y-MINY)/(MAXY-MINY)*cw, Y = v => cy+ch - v/ymax*ch;
+  // ---- new acres per year (bars) ----
+  const [cx,cy,cw,ch] = LAY.chart, CAP = 300000;
+  const X = y => cx + (y-MINY)/(MAXY+1-MINY)*cw, Y = v => cy+ch - Math.min(v,CAP)/CAP*ch;
+  const ann = y => { const r = {}; for (const k of OWN) r[k] = cum[y-MINY][k] - (y > MINY ? cum[y-MINY-1][k] : 0); return r; };
+  const barW = Math.max(1, X(MINY+1) - X(MINY) - (V ? 1.6 : 1.2));
   ctx.strokeStyle=C.rule; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(cx,cy+ch+.5); ctx.lineTo(cx+cw,cy+ch+.5); ctx.stroke();
-  const layers = OWN.map((g,j)=>[g, r=>OWN.slice(0,j+1).reduce((s,k)=>s+r[k],0)]);
-  for (let L=layers.length-1; L>=0; L--){
-    const [g,fn] = layers[L];
-    ctx.beginPath(); ctx.moveTo(X(MINY), Y(0));
-    for (let y=MINY; y<=yr; y++){ ctx.lineTo(X(y), Y(fn(cum[y-MINY]))); ctx.lineTo(X(y+1>yr?yf:y+1), Y(fn(cum[y-MINY]))); }
-    ctx.lineTo(X(yf), Y(0)); ctx.closePath(); ctx.fillStyle = C[g]; ctx.fill();
+  const rowX = [-999,-999,-999];
+  for (let y=MINY+1; y<=Math.min(yr, MAXY); y++){
+    const r = ann(y); let base = 0;
+    for (const k of OWN){ const v0 = r[k]; if (v0 <= 0) continue;
+      const y0 = Math.min(base, CAP), y1 = Math.min(base+v0, CAP); base += v0;
+      if (y1 > y0){ ctx.fillStyle = C[k]; ctx.fillRect(X(y), Y(y1), barW, Math.max(1, Y(y0)-Y(y1))); } }
+    if (base > CAP){ const lx = X(y)+barW/2, gapNeed = V?52:40; let row = rowX.findIndex(x0 => lx - x0 >= gapNeed); if (row < 0) row = 2;
+      text(Math.round(base/1000)+'k', lx, cy-6-row*(V?22:16), `600 ${V?18:13}px ${FB}`, C.ink2, 'center'); rowX[row] = lx; }
   }
-  ctx.beginPath(); for (let y=MINY; y<=Math.floor(yf); y++){ const px=X(y), py=Y(devAcres(y)); y===MINY?ctx.moveTo(px,py):ctx.lineTo(px,py); }
-  ctx.lineTo(X(yf), Y(devAcres(yf))); ctx.strokeStyle=C.dev; ctx.lineWidth=V?4:3; ctx.stroke();
-  ctx.globalAlpha=holdFade; ctx.fillStyle=C.hi; ctx.fillRect(X(yf)-1.5, cy-4, 3, ch+4); ctx.globalAlpha=1;
-  const tickY = cy+ch+(V?32:0);
-  if (V) [1900,1950,2000].forEach(y=>text(String(y), X(y), tickY, `400 22px ${FB}`, C.muted, 'center'));
-  text(`${(tot/1e6).toFixed(1)}M acres conserved · ${(devAcres(yf)/1e6).toFixed(1)}M developed`, cx, cy-(V?14:10), `600 ${V?28:20}px ${FD}`, C.ink2);
-  // arrow marking 2000 (appears once the line reaches it)
-  if (yf >= 2000){
-    const r2k = cum[2000-MINY], top = Y(OWN.reduce((s,k)=>s+r2k[k],0)), x2 = X(2000), s2 = V?1:0.8;
-    ctx.globalAlpha = Math.min(1, (yf-2000)/1.5);
-    ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(x2, top-6*s2); ctx.lineTo(x2-9*s2, top-20*s2); ctx.lineTo(x2+9*s2, top-20*s2); ctx.closePath(); ctx.fill();
-    text('2000', x2, top-28*s2, `600 ${V?26:18}px ${FD}`, C.ink, 'center');
+  ctx.globalAlpha=holdFade; ctx.fillStyle=C.hi; ctx.fillRect(X(yf+1)-1.5, cy-4, 3, ch+4); ctx.globalAlpha=1;
+  if (V) [1900,1950,2000].forEach(y=>text(String(y), X(y+.5), cy+ch+32, `400 22px ${FB}`, C.muted, 'center'));
+  text('New conservation acres each year', cx, cy-(V?70:60), `600 ${V?28:20}px ${FD}`, C.ink2);
+
+  // ---- the shift: buying land -> buying easements ----
+  if (yf >= 2008){
+    const d = (a, b) => { const t = {public:0,esmt:0,other:0}; for (let y=a; y<=b; y++){ const r = ann(y); for (const k of OWN) t[k] += r[k]; } return t; };
+    const d90 = d(1990,1999), d10 = d(2010, 2019), s10 = Math.round(d10.esmt/(d10.public+d10.esmt+d10.other)*100);
+    const [ax,ay] = LAY.shift, a2 = Math.min(1, (yf-2008)/1.2), fs = V?32:23, lh = V?46:32;
+    ctx.globalAlpha = a2;
+    ctx.fillStyle = C.public; ctx.fillRect(ax, ay-fs*.75, fs*.6, fs*.6);
+    text(`1990s: ${(d90.public/1e6).toFixed(1)} million acres bought for public land`, ax+fs*.9, ay, `600 ${fs}px ${FD}`, C.ink);
+    if (yf >= 2012){ ctx.globalAlpha = Math.min(1, (yf-2012)/1.2);
+      ctx.fillStyle = C.esmt; ctx.fillRect(ax, ay+lh-fs*.75, fs*.6, fs*.6);
+      text(`2010s: ${s10}% of new conservation land was easements`, ax+fs*.9, ay+lh, `600 ${fs}px ${FD}`, C.ink); }
     ctx.globalAlpha = 1;
   }
 
