@@ -7,7 +7,7 @@
 :root{
   --bg:#f3f5f1; --panel:#fbfcfa; --ink:#18221d; --ink2:#46534c; --muted:#6c7871; --rule:#d9dfd8;
   --water:#e3ebeb; --land:#fdfdf9; --county:#d4dad2; --coast:#9aa7a0;
-  --public:#2f7d4f; --private:#b97d0c; --nonprofit:#3a6fc0; --tribal:#b04a72; --unk:#9aa29d; --dev:#3d3b45;
+  --public:#2f7d4f; --private:#6a3d9a; --nonprofit:#3a6fc0; --tribal:#b04a72; --unk:#9aa29d; --dev:#f05a14; --esmt:#e3bd00; --esmt2:#9c8200;
   --hi:#18221d; --accent:#2f7d4f;
   --f-display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -15,11 +15,11 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
   --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
-  --public:#2e9a66; --private:#b5801c; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --dev:#d9d6e0; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}}
+  --public:#2e9a66; --private:#9470c9; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --dev:#ff6a24; --esmt:#e6c21f; --esmt2:#8f7400; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#101514; --panel:#161c1b; --ink:#e6ebe7; --ink2:#b4bfb8; --muted:#8a968f; --rule:#2a3331;
   --water:#0c1213; --land:#1b2321; --county:#2c3633; --coast:#4c5a55;
-  --public:#2e9a66; --private:#b5801c; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --dev:#d9d6e0; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}
+  --public:#2e9a66; --private:#9470c9; --nonprofit:#5a86d0; --tribal:#c4618a; --unk:#6a736e; --dev:#ff6a24; --esmt:#e6c21f; --esmt2:#8f7400; --hi:#ffffff; --accent:#3fb37a; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
@@ -66,7 +66,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
 .sw.dev{background:var(--dev)}
 .devrow{border-top:1px solid var(--rule);padding-top:12px}
 .devrow .nm small{display:block;color:var(--muted);font-weight:400;font-size:12px}
-.sw.hatch{background:repeating-linear-gradient(135deg,var(--ink2) 0 2px,transparent 2px 5px);border:1.5px solid var(--ink2)}
+.sw.hatch{background:repeating-linear-gradient(135deg,var(--esmt2) 0 1.5px,var(--esmt) 1.5px 5px);border:1.5px solid var(--esmt2)}
 .ekey{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;border-top:1px dashed var(--rule);padding-top:10px;font-size:13px;color:var(--ink2)}
 .ekey b{font-family:var(--f-display);font-weight:600;font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
 .sw.unk{background:repeating-linear-gradient(45deg,var(--unk) 0 2px,transparent 2px 5px);border:1px solid var(--unk)}
@@ -141,7 +141,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
         <div class="row"><label><input type="checkbox" id="t-private" checked><span class="sw private"></span><span class="nm">Private<small>Individuals &amp; companies, mostly under easement</small></span></label><span class="v" id="v-private">0</span></div>
         <div class="row"><label><input type="checkbox" id="t-nonprofit" checked><span class="sw nonprofit"></span><span class="nm">Nonprofit<small>Land trusts, Audubon, The Nature Conservancy</small></span></label><span class="v" id="v-nonprofit">0</span></div>
         <div class="row"><label><input type="checkbox" id="t-tribal" checked><span class="sw tribal"></span><span class="nm">Tribal<small>Miccosukee Tribe</small></span></label><span class="v" id="v-tribal">0</span></div>
-        <div class="ekey"><span class="sw hatch"></span><span>Hatched: protected by a conservation easement</span><b id="v-esmt">0</b></div>
+        <div class="ekey"><span class="sw hatch"></span><span>Conservation easements (any owner)</span><b id="v-esmt">0</b></div>
       </div>
 
       <div class="row devrow"><label><input type="checkbox" id="t-dev" checked><span class="sw dev"></span><span class="nm">Developed land<small id="devsub">Roofs, roads &amp; pavement covering 20%+ of the ground</small></span></label><span class="v" id="v-dev">0</span></div>
@@ -175,7 +175,7 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
   <div class="notes">
     <div>
       <h3>What's counted</h3>
-      <p>The footprint is the Florida Natural Areas Inventory's <a href="https://www.fnai.org/species-communities/conservation-lands" target="_blank" rel="noopener">Florida Conservation Lands</a> layer, the state's standard list of managed conservation areas. Each area is grouped by who holds title: public agencies, private individuals and companies, nonprofits, or a tribe. Private conservation land is almost entirely under conservation easements, where an agency or land trust holds the development rights; hatching marks easement land in any ownership group. Only one tribal area, the Miccosukee Tribe's 46,000-acre conservation area in the Everglades, is in the inventory; the Seminole Tribe's reservations are not.</p>
+      <p>The footprint is the Florida Natural Areas Inventory's <a href="https://www.fnai.org/species-communities/conservation-lands" target="_blank" rel="noopener">Florida Conservation Lands</a> layer, the state's standard list of managed conservation areas. Each area is grouped by who holds title: public agencies, private individuals and companies, nonprofits, or a tribe. Private conservation land is almost entirely under conservation easements, where an agency or land trust holds the development rights; easement land in any ownership group is drawn yellow, and the ownership totals still include it. Only one tribal area, the Miccosukee Tribe's 46,000-acre conservation area in the Everglades, is in the inventory; the Seminole Tribe's reservations are not.</p>
       <p>Open water is removed: the Gulf, the Atlantic, Florida Bay and other estuaries outside FDEP’s 1:12,000 shoreline, plus Lake Okeechobee and every lake or river wider than about 1,000 acres. That takes out about 2.1 million acres, mostly in Everglades, Biscayne and the Keys refuges. Marshes and swamps stay in. Florida's land area of 34.6 million acres is the denominator.</p>
     </div>
     <div>
@@ -302,7 +302,7 @@ function hatch(color, k){
 let colors = {};
 function readColors(){
   devYearDrawn = -1;
-  colors = {public:css('--public'),private:css('--private'),nonprofit:css('--nonprofit'),tribal:css('--tribal'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water'),dev:css('--dev')};
+  colors = {public:css('--public'),private:css('--private'),nonprofit:css('--nonprofit'),tribal:css('--tribal'),unk:css('--unk'),land:css('--land'),county:css('--county'),coast:css('--coast'),hi:css('--hi'),ink:css('--ink'),water:css('--water'),dev:css('--dev'),esmt:css('--esmt'),esmt2:css('--esmt2')};
   colors.lvl = [shade(colors.public,-.28), colors.public, shade(colors.public,.32), shade(colors.public,.55)];
   hatchCache = {};
 }
@@ -338,9 +338,9 @@ function draw(){
     if (gr.y === 0){ ctx.fillStyle = hatch(colors.unk, k); ctx.fill(gr.path); continue; }
     const col = fillFor(gr,k);
     if (gr.e){
-      ctx.globalAlpha = .3; ctx.fillStyle = col; ctx.fill(gr.path); ctx.globalAlpha = 1;
-      ctx.fillStyle = hatch(col, k); ctx.fill(gr.path);
-      ctx.lineWidth = px*0.9; ctx.strokeStyle = col; ctx.stroke(gr.path);
+      ctx.fillStyle = colors.esmt; ctx.fill(gr.path);
+      ctx.globalAlpha = .55; ctx.fillStyle = hatch(colors.esmt2, k); ctx.fill(gr.path); ctx.globalAlpha = 1;
+      ctx.lineWidth = px*0.9; ctx.strokeStyle = colors.esmt2; ctx.stroke(gr.path);
     } else { ctx.fillStyle = col; ctx.fill(gr.path); }
   }
   // newly acquired this year: outline
@@ -423,7 +423,7 @@ const addByYear = new Map();
 for (const f of feats){
   if (f.y === 0) continue;
   if (!addByYear.has(f.y)) addByYear.set(f.y, new Map());
-  const m = addByYear.get(f.y), key = f.n+'|'+f.g+'|'+f.m;
+  const m = addByYear.get(f.y), key = f.n+'|'+f.g+'|'+f.m+'|'+f.e;
   m.set(key, (m.get(key)||0) + f.a);
 }
 function updatePanel(){
@@ -443,12 +443,12 @@ function updatePanel(){
   $('unkline').textContent = ua ? `Another ${fmtM(ua)} acres have no recorded date and are not counted here.` : '';
   $('newh').textContent = 'Largest additions in ' + S.year;
   const m = addByYear.get(S.year), list = $('newlist'); list.innerHTML = '';
-  const items = m ? [...m.entries()].map(([k,a])=>{ const [n,g,mm]=k.split('|'); return {n:+n,g,m:mm==='1',a}; })
+  const items = m ? [...m.entries()].map(([k,a])=>{ const [n,g,mm,e]=k.split('|'); return {n:+n,g,m:mm==='1',e:e==='1',a}; })
       .filter(d=>S.show[d.g] && (S.mil || !d.m)).sort((a,b)=>b.a-a.a).slice(0,5) : [];
   if (!items.length){ list.innerHTML = '<li class="none" style="display:block">No recorded acquisitions this year.</li>'; return; }
   for (const d of items){
     const li = document.createElement('li');
-    li.innerHTML = `<i style="background:var(--${d.g})"></i><span></span><span>${fmtM(d.a)} ac</span>`;
+    li.innerHTML = `<i style="background:var(--${d.e ? 'esmt' : d.g})"></i><span></span><span>${fmtM(d.a)} ac</span>`;
     li.children[1].textContent = meta.names[d.n]; list.appendChild(li);
   }
 }
