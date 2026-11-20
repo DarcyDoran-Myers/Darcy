@@ -24,8 +24,9 @@ lakes/rivers ≥ ~1,000 acres from Esri USA Detailed Water Bodies (`tools/landcl
 
 ## Developed land
 
-`developed.b64.txt` (base64 of the binary) / `developed_meta.json`: 250 m cells (EPSG:3086) with the share of ground ≥ 20 % impervious in
-NLCD 2021 and the years when 25/50/75/100 % of that share was reached. Post-2001 timing from NLCD impervious
-2001/2006/2011/2016/2021 (MRLC WCS, `tools/nlcd.py`); pre-2001 timing from HISDAC-US Version II built-up
-property records and first-built year (`tools/devmodel.py`). Cells without building records take the mean
-timing of dated neighbours (17 % of 2021 developed area). Binary format: varint index delta, then 5 bytes.
+`developed.b64.txt` (base64 of a binary) / `developed_meta.json`: 250 m cells (EPSG:3086) with the share of ground
+≥ 20 % impervious in USGS Annual NLCD Collection 1.2 (2025) and the years when 25/50/75/100 % of that share was
+reached. Timing from 1985 follows Annual NLCD fractional impervious for 1985, 1990, 1995, 2001, 2006, 2011, 2016 and
+2021–2025 (ScienceBase, `tools/annual_nlcd.py`); before 1985 it follows HISDAC-US Version II built-up property
+records and first-built year (`tools/devmodel.py`). Cells without building records take the mean timing of dated
+neighbours (17 % of 2025 developed area). Binary format: varint index delta, then 5 bytes.

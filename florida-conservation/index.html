@@ -184,12 +184,12 @@ aside{background:var(--panel);border:1px solid var(--rule);border-radius:6px;pad
     </div>
     <div>
       <h3>How developed land is mapped</h3>
-      <p>Developed land is every 250 m cell's share of ground covered at least 20% by roofs, roads or pavement in the USGS National Land Cover Database impervious-surface maps, the threshold NLCD uses for developed land. Darker cells are more completely built over. Growth after 2001 follows the NLCD surveys of 2001, 2006, 2011, 2016 and 2021, and the layer stops growing after 2021.</p>
-      <p>Development before 2001 is timed by the year each building was built, from county property records compiled in HISDAC-US (University of Colorado Boulder). Roads, airports and cells without building records take the average timing of dated cells around them; that is 17% of today's developed area. Demolished buildings drop out of property records, so development before about 1950 is undercounted.</p>
+      <p>Developed land is every 250 m cell's share of ground covered at least 20% by roofs, roads or pavement in USGS Annual NLCD fractional impervious-surface maps (Collection 1.2), the threshold the National Land Cover Database uses for developed land. Darker cells are more completely built over. Growth from 1985 on follows the satellite maps for 1985, 1990, 1995, 2001, 2006, 2011, 2016 and every year from 2021 through 2025.</p>
+      <p>Development before 1985 is timed by the year each building was built, from county property records compiled in HISDAC-US (University of Colorado Boulder). Roads, airports and cells without building records take the average timing of dated cells around them; that is 17% of today's developed area. Demolished buildings drop out of property records, so development before about 1950 is undercounted.</p>
     </div>
     <div>
       <h3>Sources</h3>
-      <p>FNAI Florida Conservation Lands (2025 web service) · Florida DEP Division of State Lands, FL‑SOLARIS state-owned lands · FNAI Florida Forever Acquisitions · USGS Gap Analysis Project, PAD‑US 4.1 Florida · FDEP Florida Counties with Shoreline (1:12,000) · Esri USA Detailed Water Bodies · USGS/MRLC NLCD impervious surface 2001–2021 · HISDAC-US built-up property records and first-built year, Version II (Leyk, Uhl et al., Harvard Dataverse). Retrieved November 2026. Parcel shapes are simplified to about 35 m.</p>
+      <p>FNAI Florida Conservation Lands (2025 web service) · Florida DEP Division of State Lands, FL‑SOLARIS state-owned lands · FNAI Florida Forever Acquisitions · USGS Gap Analysis Project, PAD‑US 4.1 Florida · FDEP Florida Counties with Shoreline (1:12,000) · Esri USA Detailed Water Bodies · USGS Annual NLCD fractional impervious surface, Collection 1.2 (1985–2025) · HISDAC-US built-up property records and first-built year, Version II (Leyk, Uhl et al., Harvard Dataverse). Retrieved November 2026. Parcel shapes are simplified to about 35 m.</p>
     </div>
   </div>
 </div>
@@ -222,14 +222,14 @@ const devCtx = devCanvas.getContext('2d'); const devImg = devCtx.createImageData
 let devYearDrawn = -1, devColorDrawn = '';
 function paintDev(year, color){
   if (year === devYearDrawn && color === devColorDrawn) return;
-  const c = d3.rgb(color), d = devImg.data, yo = Math.min(year, 2021) - 1900;
+  const c = d3.rgb(color), d = devImg.data, yo = Math.min(year, devMeta.last) - 1900;
   for (let i=0;i<DEV.n;i++){
     const q = i*4, k = (DEV.Q[q]<=yo) + (DEV.Q[q+1]<=yo) + (DEV.Q[q+2]<=yo) + (DEV.Q[q+3]<=yo);
     const o = DEV.idx[i]*4; d[o]=c.r; d[o+1]=c.g; d[o+2]=c.b; d[o+3] = k ? Math.min(255, 40 + DEV.F[i]*k/4*0.85) : 0;
   }
   devCtx.putImageData(devImg, 0, 0); devYearDrawn = year; devColorDrawn = color;
 }
-const devAcres = y => devMeta.yearly[Math.min(Math.max(y,1900),2021)] || 0;
+const devAcres = y => devMeta.yearly[Math.min(Math.max(y,1900),devMeta.last)] || 0;
 $('loading').remove();
 
 // ---------- geometry -> Path2D, grouped by year/class ----------
@@ -438,7 +438,7 @@ function updatePanel(){
   GROUPS.forEach((g,i)=> spans[i].style.width = (vis(g)/LAND_AREA*100)+'%');
   $('stamp').textContent = S.year;
   $('v-dev').textContent = fmtM(devAcres(S.year));
-  $('devsub').textContent = S.year > 2021 ? 'Through 2021, the latest satellite survey' : 'Roofs, roads & pavement covering 20%+ of the ground';
+  $('devsub').textContent = S.year > devMeta.last ? `Through ${devMeta.last}, the latest satellite survey` : 'Roofs, roads & pavement covering 20%+ of the ground';
   const u = meta.stats[0] || {}, ua = GROUPS.reduce((s,g)=>s + (S.show[g] ? (u[g]||0) + (S.mil ? (u[g+'_m']||0) : 0) : 0), 0);
   $('unkline').textContent = ua ? `Another ${fmtM(ua)} acres have no recorded date and are not counted here.` : '';
   $('newh').textContent = 'Largest additions in ' + S.year;
@@ -464,7 +464,7 @@ function drawChart(){
   cx = d3.scaleLinear().domain([minY, maxY]).range([M.l, M.l+cw]);
   const keys = GROUPS.filter(g=>S.show[g]);
   const stack = d3.stack().keys(keys)(cum);
-  const ymax = Math.max(d3.max(cum, d=>keys.reduce((s,k)=>s+d[k],0)) || 1, S.dev ? devAcres(2021) : 0);
+  const ymax = Math.max(d3.max(cum, d=>keys.reduce((s,k)=>s+d[k],0)) || 1, S.dev ? devAcres(devMeta.last) : 0);
   cy = d3.scaleLinear().domain([0, ymax]).nice(4).range([M.t+chh, M.t]);
   const g = svg.append('g').attr('class','grid');
   cy.ticks(4).forEach(t=>{ g.append('line').attr('x1',M.l).attr('x2',M.l+cw).attr('y1',cy(t)).attr('y2',cy(t));
@@ -478,7 +478,7 @@ function drawChart(){
   if (S.dev){
     const dl = d3.line().x(d=>cx(d)).y(d=>cy(devAcres(d)));
     svg.append('path').attr('d', dl(d3.range(minY, maxY+1))).attr('fill','none').attr('stroke','var(--dev)').attr('stroke-width',2.5).attr('stroke-dasharray', null);
-    svg.append('text').attr('x', cx(2021)-4).attr('y', cy(devAcres(2021))-8).attr('text-anchor','end').attr('fill','var(--ink)').style('font-weight',600).text('Developed');
+    svg.append('text').attr('x', cx(devMeta.last)-4).attr('y', cy(devAcres(devMeta.last))-8).attr('text-anchor','end').attr('fill','var(--ink)').style('font-weight',600).text('Developed');
   }
   // marker: the year 2000
   const x2k = cx(2000), top2k = cy(keys.reduce((t,k)=>t+cum[2000-minY][k],0));
@@ -519,7 +519,7 @@ svg.on('pointerdown', e=>{ scrubbing = true; svg.node().setPointerCapture(e.poin
      const row = cum[y-minY], r = svg.node().getBoundingClientRect(), pr = svg.node().parentNode.getBoundingClientRect();
      const lines = [['public','Public'],['private','Private'],['nonprofit','Nonprofit'],['tribal','Tribal']].filter(([g])=>S.show[g])
        .map(([g,l])=>`<div><i style="background:var(--${g})"></i>${l}<span style="margin-left:auto;padding-left:12px">${fmt(Math.round(row[g]))} ac</span></div>`).join('')
-       + (S.dev ? `<div><i style="background:var(--dev)"></i>Developed${y>2021?' (2021)':''}<span style="margin-left:auto;padding-left:12px">${fmt(devAcres(y))} ac</span></div>` : '');
+       + (S.dev ? `<div><i style="background:var(--dev)"></i>Developed${y>devMeta.last?` (${devMeta.last})`:''}<span style="margin-left:auto;padding-left:12px">${fmt(devAcres(y))} ac</span></div>` : '');
      tip.innerHTML = `<b>${y}</b>${lines}`; tip.hidden = false;
      const x = e.clientX - pr.left; const tw = tip.offsetWidth;
      tip.style.left = (x + 14 + tw > pr.width ? x - tw - 14 : x + 14) + 'px'; tip.style.top = (r.top - pr.top + 30) + 'px';

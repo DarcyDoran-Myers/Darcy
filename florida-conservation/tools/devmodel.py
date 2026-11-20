@@ -1,7 +1,7 @@
 """Build per-cell development timing on the HISDAC 250 m grid.
-F       = share of the cell developed in 2021 (NLCD impervious >= 20 %)
-Timing  = pre-2001 share follows the cell's cumulative building-record curve (HISDAC BUPR, 5-yr epochs);
-          growth after 2001 follows NLCD epochs 2001/2006/2011/2016/2021.
+F       = share of the cell developed in the last satellite year (Annual NLCD fractional impervious >= 20 %)
+Timing  = share developed by the first satellite year (1985) follows the cell's cumulative building-record curve
+          (HISDAC BUPR, 5-yr epochs); later growth follows the Annual NLCD satellite years.
 Output  = sparse cells with F and the years when 25/50/75/100 % of F was reached; yearly statewide acres."""
 import sys, json, struct
 import numpy as np, rasterio
@@ -14,11 +14,13 @@ win = Window(c0, r0, nx, ny); land = np.load(W + 'landmask.npy')
 rd = lambda p: np.nan_to_num(rasterio.open(p).read(1, window=win, boundless=True, fill_value=0)).astype(np.float32)
 CELL_AC = R * R / 4046.86
 
-NE = [2001, 2006, 2011, 2016, 2021]
-dev = np.stack([np.load(W + f'dev_{y}.npy') for y in NE])
+NE = [int(y) for y in sys.argv[4].split(',')]       # satellite years, first one must be a BUPR epoch
+PFX = sys.argv[5] if len(sys.argv) > 5 else 'adev'
+dev = np.stack([np.load(W + f'{PFX}_{y}.npy') for y in NE])
 dev = np.maximum.accumulate(dev, axis=0)           # development does not revert
 F = dev[-1]; f01 = dev[0]
-BE = list(range(1900, 2001, 5))
+LAST = NE[-1]
+BE = list(range(1900, NE[0] + 1, 5))
 B = np.stack([rd(D + f'bupr/BUPR/{y}_BUPR.tif') for y in BE])
 B = np.maximum.accumulate(B, axis=0)
 fbuy = rd(D + 'f7337822')
@@ -52,7 +54,7 @@ q[rest & np.isnan(est)] = 3
 nodate = rest & np.isnan(est)
 
 # full curve on epoch times
-times = np.array(BE + NE[1:], np.float32)            # 1900..2000, 2006..2021  (2001 ~ 2000 value)
+times = np.array(BE + NE[1:], np.float32)
 curve = np.concatenate([pre, dev[1:]], axis=0)
 curve[:, nodate] = 0
 curve[len(BE) - 1:, nodate] = 0
@@ -62,11 +64,11 @@ curve[len(BE):, nodate] = (dev[1:, nodate] - f01[nodate])
 Fd = curve[-1]
 
 # yearly statewide acres (linear between epochs)
-years = np.arange(1900, 2022)
+years = np.arange(1900, LAST + 1)
 tot = curve.reshape(len(times), -1).sum(1) * CELL_AC
 yearly = np.interp(years, times, tot)
 est_tot = curve[:, (q == 2)].sum(1) * CELL_AC
-print('developed acres 1900 %.0f 1950 %.0f 1980 %.0f 2000 %.0f 2021 %.0f; undated pre-2001 %.0f; estimated share 2021 %.2f'
+print('developed acres 1900 %.0f 1950 %.0f 1980 %.0f 2000 %.0f last %.0f; undated pre-satellite %.0f; estimated share last %.2f'
       % (yearly[0], yearly[50], yearly[80], yearly[100], yearly[-1], undated_ac, est_tot[-1] / tot[-1]))
 
 # quartile years per cell
@@ -82,7 +84,7 @@ for k in (0.25, 0.5, 0.75, 1.0):
     t0, t1 = times[jp], times[j]
     frac = np.where((v1 > v0) & (j > 0), (target - v0) / np.maximum(v1 - v0, 1e-9), 1.0)
     yr = np.where(j == 0, 1900, t0 + frac * (t1 - t0))
-    qy.append(np.clip(np.ceil(yr), 1900, 2021).astype(np.int32))
+    qy.append(np.clip(np.ceil(yr), 1900, LAST).astype(np.int32))
 qy = np.stack(qy)
 # reproject F and quartile years onto a 250 m grid aligned to Florida Albers (EPSG:3086), the web map's CRS
 from rasterio.warp import reproject, Resampling, transform_bounds
@@ -115,6 +117,6 @@ open(OUT + 'developed.bin', 'wb').write(buf)
 # grid placement in EPSG:3086 (top-left corner, cell size)
 json.dump({'nx': nx, 'ny': ny, 'cell_acres': CELL_AC, 'x0': float(x0), 'y0': float(y0), 'res': R, 'n': int(len(idx)),
            'yearly': {int(y): round(float(v)) for y, v in zip(years, yearly)},
-           'estimated_share_2021': round(float(est_tot[-1] / tot[-1]), 3), 'undated_pre2001_acres': round(undated_ac)},
+           'estimated_share_last': round(float(est_tot[-1] / tot[-1]), 3), 'undated_presat_acres': round(undated_ac), 'last': LAST, 'sat_years': NE},
           open(OUT + 'developed_meta.json', 'w'), separators=(',', ':'))
 print('bytes', len(buf))
